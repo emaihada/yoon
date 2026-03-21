@@ -1,0 +1,148 @@
+<!DOCTYPE html>
+<html lang="ko">
+  <head>
+    <meta charset="UTF-8" />
+    <meta name="viewport" content="width=device-width, initial-scale=1.0" />
+    <title>최윤하의 홈피</title>
+    <link rel="icon" href="https://i.postimg.cc/YCWvMRNB/marriage.png" />
+    <script src="https://cdn.tailwindcss.com"></script>
+    <link rel="stylesheet" href="https://cdn.jsdelivr.net/npm/galmuri/dist/galmuri.css">
+    <script>
+      tailwind.config = {
+        theme: {
+          extend: {
+            fontFamily: {
+              'pixel': ['"Galmuri9"', 'monospace'],
+              'hand': ['"Galmuri9"', 'monospace'], /* Replaced Gaegu with Galmuri9 for unified retro look */
+            },
+            colors: {
+              'cy-blue': '#b2dffc',
+              'cy-gray': '#eeeeee',
+              'cy-dark': '#333333',
+              'cy-orange': '#ff8800',
+            },
+            cursor: {
+              'pixel': 'url(https://cur.cursors-4u.net/cursors/cur-2/cur116.cur), auto',
+              'pointer-pixel': 'url(https://cur.cursors-4u.net/cursors/cur-2/cur117.cur), pointer',
+            },
+            animation: {
+              'fade-in-up': 'fade-in-up 0.3s ease-out forwards',
+            },
+            keyframes: {
+              'fade-in-up': {
+                '0%': { opacity: '0', transform: 'translateY(10px)' },
+                '100%': { opacity: '1', transform: 'translateY(0)' },
+              }
+            }
+          }
+        }
+      }
+    </script>
+    <style>
+      body {
+        cursor: url(https://cur.cursors-4u.net/cursors/cur-2/cur116.cur), auto;
+        font-family: 'Galmuri9', monospace;
+      }
+      a, button, .clickable {
+        cursor: url(https://cur.cursors-4u.net/cursors/cur-2/cur117.cur), pointer;
+      }
+      /* Custom Scrollbar */
+      ::-webkit-scrollbar {
+        width: 8px;
+      }
+      ::-webkit-scrollbar-track {
+        background: #f1f1f1; 
+      }
+      ::-webkit-scrollbar-thumb {
+        background: #ccc; 
+        border-radius: 4px;
+      }
+      ::-webkit-scrollbar-thumb:hover {
+        background: #aaa; 
+      }
+      
+      /* Markdown Styles */
+      .markdown-body { 
+        line-height: 1.6; 
+        color: #333; 
+        word-break: break-word;
+      }
+      .markdown-body p { 
+        margin-bottom: 1.5em; 
+        white-space: pre-wrap; 
+      }
+      .markdown-body p:last-child { margin-bottom: 0; }
+      .markdown-body img {
+        max-width: 100%;
+        height: auto;
+        border-radius: 8px;
+        margin: 1rem 0;
+        border: 1px solid #eee;
+      }
+      
+      /* Headers Customization */
+      /* H1: Title style */
+      .markdown-body h1 { font-size: 1.8em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #ff8800; border-bottom: 2px dashed #eee; padding-bottom: 0.2em; }
+      
+      /* H2~H4: Large Text (Gradually smaller) */
+      .markdown-body h2 { font-size: 1.5em; font-weight: bold; margin-top: 1.2em; margin-bottom: 0.5em; color: #222; }
+      .markdown-body h3 { font-size: 1.3em; font-weight: bold; margin-top: 1.1em; margin-bottom: 0.5em; color: #333; }
+      .markdown-body h4 { font-size: 1.15em; font-weight: bold; margin-top: 1em; margin-bottom: 0.5em; color: #444; }
+      
+      /* H5~H6: Small Text (Captions/Notes) - No longer faint, just small */
+      .markdown-body h5 { font-size: 0.9em; font-weight: bold; margin-top: 0.5em; margin-bottom: 0.2em; color: #333; }
+      .markdown-body h6 { font-size: 0.8em; font-weight: bold; margin-top: 0.5em; margin-bottom: 0.2em; color: #555; }
+
+      /* Lists */
+      .markdown-body ul { list-style-type: disc; padding-left: 1.5em; margin: 0.5em 0; }
+      .markdown-body ol { list-style-type: decimal; padding-left: 1.5em; margin: 0.5em 0; }
+      .markdown-body li { margin-bottom: 0.2em; }
+      
+      /* Blockquote */
+      .markdown-body blockquote { border-left: 4px solid #b2dffc; margin: 1em 0; color: #666; background: #f9f9f9; padding: 0.5em 1em; }
+      
+      /* Code */
+      .markdown-body pre { background: #f4f4f4; padding: 1em; border-radius: 4px; overflow-x: auto; margin: 1em 0; font-family: monospace; font-size: 0.9em; }
+      .markdown-body code { background: #eee; padding: 0.2em 0.4em; border-radius: 3px; font-size: 0.85em; font-family: monospace; color: #d63384; }
+      .markdown-body pre code { background: transparent; padding: 0; color: inherit; }
+      
+      /* Text Decoration */
+      .markdown-body a { color: #3b82f6; text-decoration: underline; }
+      .markdown-body strong { font-weight: 900; color: #000; }
+      /* Italic -> Faint Text (User Request: * * makes text faint) */
+      .markdown-body em { font-style: normal; color: #bbb; } 
+      
+      /* GFM (Tables, Strikethrough, Task lists, HR) */
+      .markdown-body table { width: 100%; border-collapse: collapse; margin: 1em 0; font-size: 0.9em; }
+      .markdown-body th, .markdown-body td { border: 1px solid #ddd; padding: 8px; text-align: left; }
+      .markdown-body th { background-color: #f8f9fa; font-weight: bold; color: #333; }
+      .markdown-body tr:nth-child(even) { background-color: #fcfcfc; }
+      .markdown-body del { color: #999; text-decoration: line-through; }
+      .markdown-body ul.contains-task-list { list-style: none; padding-left: 0; }
+      .markdown-body input[type="checkbox"] { margin-right: 0.5em; vertical-align: middle; }
+      
+      /* Horizontal Rule (Thick line) */
+      .markdown-body hr { height: 2px; background-color: #ddd; border: none; margin: 2em 0; }
+    </style>
+  <script type="importmap">
+{
+  "imports": {
+    "react": "https://esm.sh/react@^19.2.3",
+    "react-dom/": "https://esm.sh/react-dom@^19.2.3/",
+    "react/": "https://esm.sh/react@^19.2.3/",
+    "firebase/": "https://esm.sh/firebase@^12.7.0/",
+    "lucide-react": "https://esm.sh/lucide-react@^0.562.0",
+    "react-router-dom": "https://esm.sh/react-router-dom@^7.12.0",
+    "react-markdown": "https://esm.sh/react-markdown@^9.0.1",
+    "remark-gfm": "https://esm.sh/remark-gfm@^4.0.0"
+  }
+}
+</script>
+<link rel="stylesheet" href="/index.css">
+</head>
+  <body class="bg-gray-100 font-hand text-cy-dark">
+    <div id="root"></div>
+    <script type="module" src="./index.tsx"></script>
+  <script type="module" src="/index.tsx"></script>
+</body>
+</html>

@@ -1,0 +1,145 @@
+{
+  "entities": {
+    "Stats": {
+      "title": "Stats",
+      "description": "General application statistics",
+      "type": "object",
+      "properties": {
+        "totalVisitors": {
+          "type": "number",
+          "description": "Total number of visitors"
+        }
+      },
+      "required": ["totalVisitors"]
+    },
+    "GuestbookEntry": {
+      "title": "GuestbookEntry",
+      "description": "A message in the guestbook",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the visitor"
+        },
+        "content": {
+          "type": "string",
+          "description": "Content of the message"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of creation"
+        }
+      },
+      "required": ["name", "content", "createdAt"]
+    },
+    "ContentItem": {
+      "title": "ContentItem",
+      "description": "A blog post or content item",
+      "type": "object",
+      "properties": {
+        "title": {
+          "type": "string",
+          "description": "Title of the content"
+        },
+        "content": {
+          "type": "string",
+          "description": "Body of the content"
+        },
+        "category": {
+          "type": "string",
+          "description": "Category (e.g., blog, manual)"
+        },
+        "views": {
+          "type": "number",
+          "description": "Number of views"
+        },
+        "likeCount": {
+          "type": "number",
+          "description": "Number of likes"
+        },
+        "commentCount": {
+          "type": "number",
+          "description": "Number of comments"
+        },
+        "isPinned": {
+          "type": "boolean",
+          "description": "Whether the item is pinned to top"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of creation"
+        }
+      },
+      "required": ["title", "content", "category", "createdAt"]
+    },
+    "Comment": {
+      "title": "Comment",
+      "description": "A comment on a content item",
+      "type": "object",
+      "properties": {
+        "postId": {
+          "type": "string",
+          "description": "ID of the parent content item"
+        },
+        "name": {
+          "type": "string",
+          "description": "Name of the commenter"
+        },
+        "content": {
+          "type": "string",
+          "description": "Body of the comment"
+        },
+        "createdAt": {
+          "type": "number",
+          "description": "Timestamp of creation"
+        }
+      },
+      "required": ["postId", "name", "content", "createdAt"]
+    },
+    "MiniroomLayout": {
+      "title": "MiniroomLayout",
+      "description": "Layout configuration for the miniroom",
+      "type": "object",
+      "properties": {
+        "items": {
+          "type": "array",
+          "items": {
+            "type": "object"
+          },
+          "description": "List of items in the room"
+        },
+        "bgConfig": {
+          "type": "object",
+          "description": "Background configuration"
+        },
+        "updatedAt": {
+          "type": "number",
+          "description": "Timestamp of last update"
+        }
+      },
+      "required": ["items", "bgConfig", "updatedAt"]
+    }
+  },
+  "firestore": {
+    "stats/general": {
+      "schema": "Stats",
+      "description": "General stats document"
+    },
+    "guestbook": {
+      "schema": "GuestbookEntry",
+      "description": "Collection of guestbook entries"
+    },
+    "contents": {
+      "schema": "ContentItem",
+      "description": "Collection of blog/content items"
+    },
+    "comments": {
+      "schema": "Comment",
+      "description": "Collection of comments"
+    },
+    "miniroom/layout": {
+      "schema": "MiniroomLayout",
+      "description": "Miniroom layout document"
+    }
+  }
+}

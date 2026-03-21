@@ -1,0 +1,116 @@
+rules_version = '2';
+service cloud.firestore {
+  match /databases/{database}/documents {
+    
+    // ===============================================================
+    // Helper Functions
+    // ===============================================================
+    function isAuthenticated() {
+      return request.auth != null;
+    }
+
+    function isAdmin() {
+      return isAuthenticated() &&
+        (get(/databases/$(database)/documents/users/$(request.auth.uid)).data.role == 'admin' ||
+          (request.auth.token.email == "ppap2565@gmail.com" && request.auth.token.email_verified == true)); // Default admin
+    }
+
+    function hasRequiredFields(fields) {
+      return request.resource.data.keys().hasAll(fields);
+    }
+
+    function hasOnlyAllowedFields(fields) {
+      return request.resource.data.keys().hasOnly(fields);
+    }
+
+    // ===============================================================
+    // Domain Validators
+    // ===============================================================
+    function isValidGuestbookEntry(data) {
+      return hasRequiredFields(['name', 'content', 'createdAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
+             data.createdAt is number;
+    }
+
+    function isValidContentItem(data) {
+      return hasRequiredFields(['title', 'content', 'category', 'createdAt']) &&
+             data.title is string && data.title.size() > 0 && data.title.size() < 200 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 10000 &&
+             data.category is string &&
+             data.createdAt is number &&
+             (!('views' in data) || data.views is number) &&
+             (!('likeCount' in data) || data.likeCount is number) &&
+             (!('commentCount' in data) || data.commentCount is number) &&
+             (!('isPinned' in data) || data.isPinned is bool);
+    }
+
+    function isValidComment(data) {
+      return hasRequiredFields(['postId', 'name', 'content', 'createdAt']) &&
+             data.postId is string &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.content is string && data.content.size() > 0 && data.content.size() < 1000 &&
+             data.createdAt is number;
+    }
+
+    function isValidMiniroomLayout(data) {
+      return hasRequiredFields(['items', 'bgConfig', 'updatedAt']) &&
+             data.items is list &&
+             data.bgConfig is map &&
+             data.updatedAt is number;
+    }
+
+    function isValidStats(data) {
+      return hasRequiredFields(['totalVisitors']) &&
+             data.totalVisitors is number;
+    }
+
+    // ===============================================================
+    // Match Rules
+    // ===============================================================
+    
+    // Guestbook: Anyone can read and create. 
+    // Only Admin can delete.
+    match /guestbook/{entryId} {
+      allow read: if true;
+      allow create: if isValidGuestbookEntry(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+    
+    // Contents (Blog, Manual, Culture, etc.):
+    // Public read, Admin write.
+    match /contents/{contentId} {
+      allow read: if true;
+      allow create: if isAdmin() && isValidContentItem(request.resource.data);
+      allow update: if (isAdmin() && isValidContentItem(request.resource.data)) || 
+                      (hasOnlyAllowedFields(resource.data.keys().concat(['views', 'likeCount', 'commentCount'])) && 
+                       isValidContentItem(request.resource.data));
+      allow delete: if isAdmin();
+    }
+
+    // Comments: Anyone can read/create. Only Admin can delete.
+    match /comments/{commentId} {
+      allow read: if true;
+      allow create: if isValidComment(request.resource.data);
+      allow update, delete: if isAdmin();
+    }
+
+    // Miniroom: Public read, Admin write.
+    match /miniroom/{docId} {
+      allow read: if true;
+      allow write: if isAdmin() && isValidMiniroomLayout(request.resource.data);
+    }
+
+    // Stats: Public read, anyone can increment (update).
+    match /stats/{statId} {
+      allow read: if true;
+      allow create, update: if isValidStats(request.resource.data);
+      allow delete: if isAdmin();
+    }
+
+    // Users: Admin only or self
+    match /users/{userId} {
+      allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+  }
+}
