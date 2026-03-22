@@ -1,4 +1,6 @@
 import Phaser from 'phaser';
+import { rtdb } from '../../services/firebase';
+import { ref, onValue, set, onDisconnect, remove, off } from 'firebase/database';
 
 export class GameScene extends Phaser.Scene {
   private player!: Phaser.Physics.Arcade.Sprite;
@@ -51,6 +53,11 @@ export class GameScene extends Phaser.Scene {
   private mapWidth = 50;
   private mapHeight = 50;
   private tileSize = 32;
+  private otherPlayerSprites: { [uid: string]: Phaser.GameObjects.Container } = {};
+  private lastSyncTime = 0;
+  private lastSyncX = 0;
+  private lastSyncY = 0;
+  private playersRef: any;
 
   constructor() {
     super('GameScene');
@@ -566,6 +573,93 @@ export class GameScene extends Phaser.Scene {
     // Collect item
     this.physics.add.overlap(this.player, this.items, this.collectItem as any, undefined, this);
     this.physics.add.overlap(this.player, this.fireballs, this.handleFireballHit as any, undefined, this);
+
+    // Multiplayer setup
+    this.playersRef = ref(rtdb, 'players');
+    onValue(this.playersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) {
+        for (const id in this.otherPlayerSprites) {
+          this.otherPlayerSprites[id].destroy();
+          delete this.otherPlayerSprites[id];
+        }
+        return;
+      }
+      
+      for (const id in data) {
+        if (id === this.uid) continue;
+        
+        const pData = data[id];
+        if (!this.otherPlayerSprites[id]) {
+          const container = this.add.container(pData.x, pData.y);
+          const sprite = this.add.sprite(0, 0, 'player');
+          
+          let tint = parseInt(pData.skinColor?.replace('#', '') || 'ffccaa', 16);
+          sprite.setTint(tint);
+          if (pData.equippedWeapon === 'bow') sprite.setTint(0xffcc88);
+          else if (pData.equippedWeapon === 'staff') sprite.setTint(0x88ccff);
+          if (pData.equippedArmor === 'iron') sprite.setTint(0x888888);
+          else if (pData.equippedArmor === 'leather') {
+            const currentTint = sprite.tintTopLeft;
+            sprite.setTint(Phaser.Display.Color.GetColor(
+              (currentTint >> 16 & 0xFF) * 0.8,
+              (currentTint >> 8 & 0xFF) * 0.8,
+              (currentTint & 0xFF) * 0.8
+            ));
+          }
+
+          const nameTag = this.add.text(0, -28, `Lv.${pData.level || 1} ${pData.nickname || '플레이어'}`, {
+            fontSize: '40px', color: '#ffffff', stroke: '#000000', strokeThickness: 8, fontFamily: 'monospace'
+          }).setOrigin(0.5, 1).setScale(0.25);
+          
+          container.add([sprite, nameTag]);
+          container.setDepth(9);
+          this.otherPlayerSprites[id] = container;
+        } else {
+          const container = this.otherPlayerSprites[id];
+          // Simple interpolation could be added here, but direct set is fine for now
+          container.setPosition(pData.x, pData.y);
+          const nameTag = container.list[1] as Phaser.GameObjects.Text;
+          if (nameTag) nameTag.setText(`Lv.${pData.level || 1} ${pData.nickname || '플레이어'}`);
+          
+          const sprite = container.list[0] as Phaser.GameObjects.Sprite;
+          if (sprite) {
+            let tint = parseInt(pData.skinColor?.replace('#', '') || 'ffccaa', 16);
+            sprite.setTint(tint);
+            if (pData.equippedWeapon === 'bow') sprite.setTint(0xffcc88);
+            else if (pData.equippedWeapon === 'staff') sprite.setTint(0x88ccff);
+            if (pData.equippedArmor === 'iron') sprite.setTint(0x888888);
+            else if (pData.equippedArmor === 'leather') {
+              const currentTint = sprite.tintTopLeft;
+              sprite.setTint(Phaser.Display.Color.GetColor(
+                (currentTint >> 16 & 0xFF) * 0.8,
+                (currentTint >> 8 & 0xFF) * 0.8,
+                (currentTint & 0xFF) * 0.8
+              ));
+            }
+          }
+        }
+      }
+      
+      for (const id in this.otherPlayerSprites) {
+        if (!data[id]) {
+          this.otherPlayerSprites[id].destroy();
+          delete this.otherPlayerSprites[id];
+        }
+      }
+    });
+
+    const myPlayerRef = ref(rtdb, `players/${this.uid}`);
+    onDisconnect(myPlayerRef).remove();
+
+    this.events.on('destroy', () => {
+      off(this.playersRef);
+      remove(myPlayerRef);
+    });
+    this.events.on('shutdown', () => {
+      off(this.playersRef);
+      remove(myPlayerRef);
+    });
   }
 
   handleFireballHit(player: any, fireball: any) {
@@ -1294,6 +1388,24 @@ export class GameScene extends Phaser.Scene {
 
   update() {
     if (!this.player) return;
+
+    // Sync position to RTDB (throttle to 10fps)
+    if (this.time.now - this.lastSyncTime > 100) {
+      if (this.player.x !== this.lastSyncX || this.player.y !== this.lastSyncY) {
+        this.lastSyncTime = this.time.now;
+        this.lastSyncX = this.player.x;
+        this.lastSyncY = this.player.y;
+        set(ref(rtdb, `players/${this.uid}`), {
+          x: this.player.x,
+          y: this.player.y,
+          nickname: this.playerStats.nickname || '플레이어',
+          level: this.playerStats.level || 1,
+          equippedWeapon: this.playerStats.equippedWeapon || null,
+          equippedArmor: this.playerStats.equippedArmor || null,
+          skinColor: this.playerStats.skinColor || '#ffccaa'
+        });
+      }
+    }
 
     // Update name tag and guild tag positions
     if (this.nameTag) {
