@@ -16,6 +16,7 @@ export class GameScene extends Phaser.Scene {
   private playerStats: any;
   private uid!: string;
   private lastDamageTime = 0;
+  private lastFootstepTime = 0;
   private nameTag!: Phaser.GameObjects.Text;
   private guildTag!: Phaser.GameObjects.Text;
   private speed = 150;
@@ -58,6 +59,8 @@ export class GameScene extends Phaser.Scene {
   private lastSyncX = 0;
   private lastSyncY = 0;
   private playersRef: any;
+  private monstersRef: any;
+  private syncedMonsters: { [id: string]: Phaser.Physics.Arcade.Sprite } = {};
 
   constructor() {
     super('GameScene');
@@ -79,6 +82,12 @@ export class GameScene extends Phaser.Scene {
     // Ensure x, y exist. Default to town center (25 * 32 = 800)
     this.playerStats.x = 800;
     this.playerStats.y = 800;
+  }
+
+  playSound(key: string, config?: Phaser.Types.Sound.SoundConfig) {
+    if (this.cache.audio.exists(key)) {
+      this.sound.play(key, config);
+    }
   }
 
   preload() {
@@ -380,6 +389,8 @@ export class GameScene extends Phaser.Scene {
   }
 
   create() {
+    this.playSound('bgm', { loop: true, volume: 0.3 });
+
     // 4. Monsters Group (Create before map so boss can be added)
     this.monsters = this.physics.add.group();
 
@@ -475,12 +486,20 @@ export class GameScene extends Phaser.Scene {
     };
     window.addEventListener('toggle-minimap', toggleMinimapHandler);
 
+    const playSoundHandler = (e: any) => {
+      if (e.detail && e.detail.key) {
+        this.playSound(e.detail.key, e.detail.config);
+      }
+    };
+    window.addEventListener('play-sound', playSoundHandler);
+
     this.events.on('destroy', () => {
       window.removeEventListener('update-player-guild', guildUpdateHandler);
       window.removeEventListener('player-resurrect', resurrectHandler);
       window.removeEventListener('update-player-stats', statsUpdateHandler);
       window.removeEventListener('player-teleport', teleportHandler);
       window.removeEventListener('toggle-minimap', toggleMinimapHandler);
+      window.removeEventListener('play-sound', playSoundHandler);
     });
 
     // 3. Input Setup
@@ -525,14 +544,6 @@ export class GameScene extends Phaser.Scene {
 
     // 4. Monsters Group (Moved to top of create)
     
-    // Spawn monsters periodically outside viewport
-    this.time.addEvent({
-      delay: 1500, // Increased frequency (was 3000)
-      callback: this.spawnMonster,
-      callbackScope: this,
-      loop: true
-    });
-
     // 5. Items Group
     this.items = this.physics.add.group();
     this.fireballs = this.physics.add.group();
@@ -612,7 +623,11 @@ export class GameScene extends Phaser.Scene {
             fontSize: '40px', color: '#ffffff', stroke: '#000000', strokeThickness: 8, fontFamily: 'monospace'
           }).setOrigin(0.5, 1).setScale(0.25);
           
-          container.add([sprite, nameTag]);
+          const guildTag = this.add.text(0, -16, pData.guild ? `[${pData.guild}]` : '', {
+            fontSize: '36px', color: '#ffff00', stroke: '#000000', strokeThickness: 8, fontFamily: 'monospace'
+          }).setOrigin(0.5, 1).setScale(0.25);
+          
+          container.add([sprite, nameTag, guildTag]);
           container.setDepth(9);
           this.otherPlayerSprites[id] = container;
         } else {
@@ -621,6 +636,9 @@ export class GameScene extends Phaser.Scene {
           container.setPosition(pData.x, pData.y);
           const nameTag = container.list[1] as Phaser.GameObjects.Text;
           if (nameTag) nameTag.setText(`Lv.${pData.level || 1} ${pData.nickname || '플레이어'}`);
+          
+          const guildTag = container.list[2] as Phaser.GameObjects.Text;
+          if (guildTag) guildTag.setText(pData.guild ? `[${pData.guild}]` : '');
           
           const sprite = container.list[0] as Phaser.GameObjects.Sprite;
           if (sprite) {
@@ -649,6 +667,60 @@ export class GameScene extends Phaser.Scene {
       }
     });
 
+    // Monster sync setup
+    this.monstersRef = ref(rtdb, 'monsters');
+    onValue(this.monstersRef, (snapshot) => {
+      const data = snapshot.val();
+      if (!data) return;
+      
+      const now = Date.now();
+      this.monsters.getChildren().forEach((monster: any) => {
+        const id = monster.getData('id');
+        if (!id) return;
+        
+        const mData = data[id];
+        if (mData) {
+          monster.setData('hp', mData.hp);
+          if (mData.x !== undefined && mData.y !== undefined) {
+            if (Phaser.Math.Distance.Between(monster.x, monster.y, mData.x, mData.y) > 50) {
+              monster.setPosition(mData.x, mData.y);
+            }
+          }
+          if (mData.deadUntil && mData.deadUntil > now) {
+            monster.setVisible(false);
+            monster.body.enable = false;
+            if (monster.getData('hpBar')) monster.getData('hpBar').clear();
+            if (monster.getData('nameTag')) monster.getData('nameTag').setVisible(false);
+          } else {
+            monster.setVisible(true);
+            monster.body.enable = true;
+            if (monster.getData('nameTag')) monster.getData('nameTag').setVisible(true);
+            if (mData.hp <= 0 && (!mData.deadUntil || mData.deadUntil <= now)) {
+              // Time to respawn!
+              const startX = monster.getData('startX');
+              const startY = monster.getData('startY');
+              monster.setPosition(startX, startY);
+              monster.setData('hp', monster.getData('maxHp'));
+              set(ref(rtdb, `monsters/${id}`), {
+                hp: monster.getData('maxHp'),
+                x: startX,
+                y: startY,
+                deadUntil: null
+              });
+              if (monster.getData('isBoss')) {
+                window.dispatchEvent(new CustomEvent('local-system-message', { 
+                  detail: { text: `보스 드래곤이 다시 나타났습니다!`, popupOnly: true } 
+                }));
+              }
+            }
+          }
+        }
+      });
+    });
+
+    // Generate local monsters using a seed
+    this.generateLocalMonsters();
+
     const myPlayerRef = ref(rtdb, `players/${this.uid}`);
     onDisconnect(myPlayerRef).remove();
 
@@ -666,6 +738,8 @@ export class GameScene extends Phaser.Scene {
     if (this.isDead) return;
     fireball.destroy();
     
+    this.playSound('sfx_hit', { volume: 0.8 });
+
     this.playerStats.hp -= 20;
     this.lastDamageTime = this.time.now;
     player.setTint(0xff0000);
@@ -715,6 +789,13 @@ export class GameScene extends Phaser.Scene {
     this.mapHeight = 100;
     this.tileSize = 32;
     
+    // Seeded random generator for consistent map generation across clients
+    let seed = 12345;
+    const random = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
+    
     this.physics.world.setBounds(0, 0, this.mapWidth * this.tileSize, this.mapHeight * this.tileSize);
     this.cameras.main.setBounds(0, 0, this.mapWidth * this.tileSize, this.mapHeight * this.tileSize);
     this.walls = this.physics.add.staticGroup();
@@ -752,8 +833,8 @@ export class GameScene extends Phaser.Scene {
         // Skip obstacles in key areas
         const isSafeFromObstacles = isTown || distFromRuinedVillage < 10 || distFromOrcVillage < 15 || distFromDragonNest < 10 || distFromWolfPlains < 12 || distFromGhostForest < 15 || distFromGoblinMine < 15;
         
-        const isForest = !isSafeFromObstacles && Math.random() < 0.05; // Reduced density
-        const isStoneArea = !isSafeFromObstacles && Math.random() < 0.02; // Reduced density
+        const isForest = !isSafeFromObstacles && random() < 0.05; // Reduced density
+        const isStoneArea = !isSafeFromObstacles && random() < 0.02; // Reduced density
         
         let texture = 'grass';
         if (isTown) texture = 'town_floor';
@@ -769,14 +850,14 @@ export class GameScene extends Phaser.Scene {
         // Visual cues for regions
         if (distFromRuinedVillage < 10) {
           tile.setTint(0x886644); // Brownish for ruined village
-          if (Math.random() < 0.1) {
+          if (random() < 0.1) {
             const ruined = this.walls.create(x * this.tileSize + this.tileSize/2, y * this.tileSize + this.tileSize/2, 'stone').setDepth(1);
             ruined.setTint(0x664422);
             this.grid[y][x] = 1;
           }
         } else if (distFromGhostForest < 15) {
           tile.setTint(0x444466); // Darker blue for ghost forest
-          if (Math.random() < 0.08) { // Add ruined structures
+          if (random() < 0.08) { // Add ruined structures
             const ruined = this.walls.create(x * this.tileSize + this.tileSize/2, y * this.tileSize + this.tileSize/2, 'stone').setDepth(1);
             ruined.setTint(0x333355);
             this.grid[y][x] = 1;
@@ -785,14 +866,14 @@ export class GameScene extends Phaser.Scene {
           tile.setTint(0x664444); // Darker red for orc camp
         } else if (distFromGoblinMine < 15) {
           tile.setTint(0x446644); // Darker green for goblin mine
-          if (Math.random() < 0.05) { // Add goblin tents/huts
+          if (random() < 0.05) { // Add goblin tents/huts
             const hut = this.walls.create(x * this.tileSize + this.tileSize/2, y * this.tileSize + this.tileSize/2, 'building').setDepth(1).setScale(0.5);
             hut.setTint(0x444400);
             this.grid[y][x] = 1;
           }
         } else if (distFromWolfPlains < 12) {
           tile.setTint(0x666644); // Darker yellow for wolf plains
-          if (Math.random() < 0.05) { // Add bushes/dens
+          if (random() < 0.05) { // Add bushes/dens
             const bush = this.walls.create(x * this.tileSize + this.tileSize/2, y * this.tileSize + this.tileSize/2, 'tree').setDepth(1).setScale(0.7);
             bush.setTint(0x445522);
             this.grid[y][x] = 1;
@@ -961,12 +1042,15 @@ export class GameScene extends Phaser.Scene {
     this.boss.setDepth(5);
     this.boss.setData('hp', 2000);
     this.boss.setData('maxHp', 2000);
+    this.boss.setData('startX', 87 * this.tileSize);
+    this.boss.setData('startY', 87 * this.tileSize);
     this.boss.setData('type', 'dragon');
     this.boss.setData('name', '드래곤 보스');
     this.boss.setData('drop', 'item_dragon_heart');
     this.boss.setData('dropName', '드래곤의 심장');
     this.boss.setData('exp', 1000);
     this.boss.setData('isBoss', true);
+    this.boss.setData('id', 'boss_dragon');
     
     if (this.bossNameTag) this.bossNameTag.destroy();
     this.bossNameTag = this.add.text(this.boss.x, this.boss.y - 40, '드래곤 보스', {
@@ -979,6 +1063,9 @@ export class GameScene extends Phaser.Scene {
       this.bossHpBar.setDepth(11);
     }
     
+    this.boss.setData('nameTag', this.bossNameTag);
+    this.boss.setData('hpBar', this.bossHpBar);
+
     this.monsters.add(this.boss);
 
     if (this.minimapCamera) {
@@ -986,39 +1073,12 @@ export class GameScene extends Phaser.Scene {
     }
   }
 
-  spawnMonster() {
-    if (!this.cameras.main) return;
-    if (this.monsters.getLength() >= 50) return; // Limit to 50 monsters
-    
-    const cam = this.cameras.main;
-    const padding = 100; // Spawn outside camera view
-    
-    let x, y;
-    if (Math.random() > 0.5) {
-      // Top or Bottom
-      x = Phaser.Math.Between(cam.worldView.left - padding, cam.worldView.right + padding);
-      y = Math.random() > 0.5 ? cam.worldView.top - padding : cam.worldView.bottom + padding;
-    } else {
-      // Left or Right
-      x = Math.random() > 0.5 ? cam.worldView.left - padding : cam.worldView.right + padding;
-      y = Phaser.Math.Between(cam.worldView.top - padding, cam.worldView.bottom + padding);
-    }
-
-    // Ensure within world bounds (inside the walls)
-    x = Phaser.Math.Clamp(x, this.tileSize * 2, this.physics.world.bounds.width - this.tileSize * 2);
-    y = Phaser.Math.Clamp(y, this.tileSize * 2, this.physics.world.bounds.height - this.tileSize * 2);
-
-    // Prevent spawning in town (center 800,800 radius 200)
-    const distFromTown = Phaser.Math.Distance.Between(x, y, 800, 800);
-    if (distFromTown < 250) return;
-
-    // Determine monster type based on distance from key regions
-    let type = 'slime';
-    let hp = 30;
-    let name = '슬라임';
-    let drop = 'item_slime';
-    let dropName = '슬라임의 점액';
-    let exp = 10;
+  generateLocalMonsters() {
+    let seed = 8888;
+    const random = () => {
+      seed = (seed * 9301 + 49297) % 233280;
+      return seed / 233280;
+    };
 
     const wolfPlainsPos = { x: 80 * this.tileSize, y: 20 * this.tileSize };
     const orcVillagePos = { x: 80 * this.tileSize, y: 80 * this.tileSize };
@@ -1026,84 +1086,66 @@ export class GameScene extends Phaser.Scene {
     const goblinMinePos = { x: 50 * this.tileSize, y: 85 * this.tileSize };
     const dragonNestPos = { x: 87 * this.tileSize, y: 87 * this.tileSize };
 
-    const distFromWolfPlains = Phaser.Math.Distance.Between(x, y, wolfPlainsPos.x, wolfPlainsPos.y);
-    const distFromOrcVillage = Phaser.Math.Distance.Between(x, y, orcVillagePos.x, orcVillagePos.y);
-    const distFromGhostForest = Phaser.Math.Distance.Between(x, y, ghostForestPos.x, ghostForestPos.y);
-    const distFromGoblinMine = Phaser.Math.Distance.Between(x, y, goblinMinePos.x, goblinMinePos.y);
-    const distFromDragonNest = Phaser.Math.Distance.Between(x, y, dragonNestPos.x, dragonNestPos.y);
+    for (let i = 0; i < 200; i++) {
+      const x = random() * (this.mapWidth * this.tileSize);
+      const y = random() * (this.mapHeight * this.tileSize);
 
-    let spawnCount = 1;
-    let isSpecialRegion = false;
+      // Prevent spawning in town
+      if (Phaser.Math.Distance.Between(x, y, 800, 800) < 300) continue;
 
-    if (distFromWolfPlains < 400) {
-      type = 'wolf';
-      hp = 50;
-      name = '늑대';
-      drop = 'item_wolf_fur';
-      dropName = '늑대의 가죽';
-      exp = 15;
-      spawnCount = 3;
-      isSpecialRegion = true;
-    } else if (distFromOrcVillage < 600) {
-      type = 'orc';
-      hp = 150;
-      name = '오크';
-      drop = 'item_orc_tooth';
-      dropName = '오크의 이빨';
-      exp = 40;
-      if (Math.random() < 0.5) spawnCount = 2;
-      isSpecialRegion = true;
-    } else if (distFromGhostForest < 600) {
-      type = 'ghost';
-      hp = 250;
-      name = '망령';
-      drop = 'item_ectoplasm'; 
-      dropName = '망령의 파편';
-      exp = 60;
-      isSpecialRegion = true;
-    } else if (distFromGoblinMine < 600) {
-      type = 'goblin';
-      hp = 80;
-      name = '고블린';
-      drop = 'item_goblin_ear';
-      dropName = '고블린의 귀';
-      exp = 25;
-      isSpecialRegion = true;
-    } else if (distFromDragonNest < 400) {
-      // Don't spawn regular monsters in dragon nest
-      return;
-    }
+      let type = 'slime';
+      let hp = 30;
+      let name = '슬라임';
+      let drop = 'item_slime_jelly';
+      let dropName = '슬라임의 점액';
+      let exp = 10;
 
-    // Slime spawning logic
-    if (!isSpecialRegion) {
-      if (Math.random() > 0.3) return; // Reduce slime spawn rate
-      type = 'slime';
-      hp = 30;
-      name = '슬라임';
-      drop = 'item_slime_jelly';
-      dropName = '슬라임의 점액';
-      exp = 10;
-    } else {
-      // If we are in a special region, we ONLY spawn that region's monster
-      // (The logic above already set the type correctly)
-    }
+      const distFromWolfPlains = Phaser.Math.Distance.Between(x, y, wolfPlainsPos.x, wolfPlainsPos.y);
+      const distFromOrcVillage = Phaser.Math.Distance.Between(x, y, orcVillagePos.x, orcVillagePos.y);
+      const distFromGhostForest = Phaser.Math.Distance.Between(x, y, ghostForestPos.x, ghostForestPos.y);
+      const distFromGoblinMine = Phaser.Math.Distance.Between(x, y, goblinMinePos.x, goblinMinePos.y);
+      const distFromDragonNest = Phaser.Math.Distance.Between(x, y, dragonNestPos.x, dragonNestPos.y);
 
-    for (let i = 0; i < spawnCount; i++) {
-      if (this.monsters.getLength() >= 100) break;
-      const offsetX = i === 0 ? 0 : Phaser.Math.Between(-50, 50);
-      const offsetY = i === 0 ? 0 : Phaser.Math.Between(-50, 50);
-      
-      const monster = this.monsters.create(x + offsetX, y + offsetY, type);
+      if (distFromDragonNest < 400) continue; // No regular monsters in dragon nest
+
+      if (distFromWolfPlains < 400) {
+        type = 'wolf'; hp = 50; name = '늑대'; drop = 'item_wolf_fur'; dropName = '늑대의 가죽'; exp = 15;
+      } else if (distFromOrcVillage < 600) {
+        type = 'orc'; hp = 150; name = '오크'; drop = 'item_orc_tooth'; dropName = '오크의 이빨'; exp = 40;
+      } else if (distFromGhostForest < 600) {
+        type = 'ghost'; hp = 250; name = '망령'; drop = 'item_ectoplasm'; dropName = '망령의 파편'; exp = 60;
+      } else if (distFromGoblinMine < 600) {
+        type = 'goblin'; hp = 80; name = '고블린'; drop = 'item_goblin_ear'; dropName = '고블린의 귀'; exp = 25;
+      } else {
+        if (random() > 0.4) continue; // Reduce slime density
+      }
+
+      const id = `monster_${i}`;
+      const monster = this.monsters.create(x, y, type);
       monster.setInteractive();
       monster.setDepth(5);
+      monster.setData('id', id);
       monster.setData('type', type);
       monster.setData('hp', hp);
+      monster.setData('maxHp', hp);
+      monster.setData('startX', x);
+      monster.setData('startY', y);
       monster.setData('name', name);
       monster.setData('drop', drop);
       monster.setData('dropName', dropName);
       monster.setData('exp', exp);
       monster.setData('lastPathTime', 0);
       monster.setData('path', []);
+
+      // Add name tag
+      const nameTag = this.add.text(x, y - 20, name, {
+        fontSize: '24px', color: '#ffaaaa', stroke: '#000000', strokeThickness: 4, fontFamily: 'monospace'
+      }).setOrigin(0.5, 1).setDepth(6).setScale(0.5);
+      monster.setData('nameTag', nameTag);
+      
+      const hpBar = this.add.graphics();
+      hpBar.setDepth(6);
+      monster.setData('hpBar', hpBar);
     }
   }
 
@@ -1111,6 +1153,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isDead) return;
 
     if (this.time.now - this.lastDamageTime > 1000) {
+      this.playSound('sfx_hit', { volume: 0.8 });
       this.playerStats.hp -= 10;
       this.lastDamageTime = this.time.now;
       
@@ -1157,6 +1200,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     this.lastAttackTime = this.time.now;
+    this.playSound('sfx_attack', { volume: 0.8 });
 
     // Simple distance check
     const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, monster.x, monster.y);
@@ -1205,6 +1249,23 @@ export class GameScene extends Phaser.Scene {
       hp -= damage;
       monster.setData('hp', hp);
 
+      // Update Firebase
+      const id = monster.getData('id');
+      if (id) {
+        if (hp <= 0) {
+          set(ref(rtdb, `monsters/${id}`), {
+            hp: 0,
+            deadUntil: Date.now() + (monster.getData('isBoss') ? 180000 : 30000) // 3 mins for boss, 30s for normal
+          });
+        } else {
+          set(ref(rtdb, `monsters/${id}`), {
+            hp: hp,
+            x: Math.round(monster.x),
+            y: Math.round(monster.y)
+          });
+        }
+      }
+
       // Show Damage Number
       this.showDamageNumber(monster.x, monster.y, damage);
 
@@ -1216,24 +1277,18 @@ export class GameScene extends Phaser.Scene {
         const mExp = monster.getData('exp');
         const isBoss = monster.getData('isBoss');
 
-        monster.destroy();
+        // Hide monster instead of destroying
+        monster.setVisible(false);
+        monster.body.enable = false;
+        if (monster.getData('hpBar')) monster.getData('hpBar').clear();
+        if (monster.getData('nameTag')) monster.getData('nameTag').setVisible(false);
+
         if (this.targetMonster === monster) this.targetMonster = null;
         
         if (isBoss) {
-          if (this.bossNameTag) this.bossNameTag.destroy();
-          if (this.bossHpBar) this.bossHpBar.clear();
-          
           window.dispatchEvent(new CustomEvent('local-system-message', { 
             detail: { text: `보스 드래곤이 처치되었습니다! 3분 후 다시 나타납니다.`, popupOnly: true } 
           }));
-
-          // Respawn boss after 3 minutes
-          this.time.delayedCall(180000, () => {
-            this.spawnBoss();
-            window.dispatchEvent(new CustomEvent('local-system-message', { 
-              detail: { text: `보스 드래곤이 다시 나타났습니다!`, popupOnly: true } 
-            }));
-          });
         }
         // System Message
         window.dispatchEvent(new CustomEvent('local-system-message', { 
@@ -1287,6 +1342,7 @@ export class GameScene extends Phaser.Scene {
   gainExp(amount: number) {
     this.playerStats.exp += amount;
     if (this.playerStats.exp >= this.playerStats.maxExp) {
+      this.playSound('sfx_level_up', { volume: 0.8 });
       this.playerStats.level++;
       this.playerStats.exp -= this.playerStats.maxExp;
       this.playerStats.maxExp = Math.floor(this.playerStats.maxExp * 1.2 + 50);
@@ -1341,6 +1397,8 @@ export class GameScene extends Phaser.Scene {
   collectItem(player: Phaser.Physics.Arcade.Sprite, item: Phaser.Physics.Arcade.Sprite) {
     if (this.isDead) return;
     
+    this.playSound('sfx_item', { volume: 0.8 });
+
     const itemId = item.getData('itemId') || 'item_unknown';
     const itemName = item.getData('itemName') || '알 수 없는 아이템';
     item.destroy();
@@ -1400,6 +1458,7 @@ export class GameScene extends Phaser.Scene {
           y: this.player.y,
           nickname: this.playerStats.nickname || '플레이어',
           level: this.playerStats.level || 1,
+          guild: this.playerStats.guild || null,
           equippedWeapon: this.playerStats.equippedWeapon || null,
           equippedArmor: this.playerStats.equippedArmor || null,
           skinColor: this.playerStats.skinColor || '#ffccaa'
@@ -1416,7 +1475,7 @@ export class GameScene extends Phaser.Scene {
     }
 
     // Render Boss HP Bar
-    if (this.boss && this.boss.active) {
+    if (this.boss && this.boss.active && this.boss.visible) {
       this.bossNameTag.setPosition(this.boss.x, this.boss.y - 40);
       this.bossHpBar.clear();
       const hp = this.boss.getData('hp');
@@ -1432,7 +1491,6 @@ export class GameScene extends Phaser.Scene {
       this.bossHpBar.fillRect(x, y, width * (hp / maxHp), height);
     } else if (this.bossHpBar) {
       this.bossHpBar.clear();
-      if (this.bossNameTag) this.bossNameTag.destroy();
     }
 
     // Reset velocity
@@ -1441,7 +1499,7 @@ export class GameScene extends Phaser.Scene {
     if (this.isDead) return;
 
     // Boss AI - Fireball attack
-    if (this.boss && this.boss.active) {
+    if (this.boss && this.boss.active && this.boss.visible) {
       const distToPlayer = Phaser.Math.Distance.Between(this.boss.x, this.boss.y, this.player.x, this.player.y);
       if (distToPlayer < 400) {
         if (this.time.now - this.lastBossFireTime > 2000) {
@@ -1501,7 +1559,7 @@ export class GameScene extends Phaser.Scene {
       
       this.monsters.getChildren().forEach((monsterObj) => {
         const m = monsterObj as Phaser.Physics.Arcade.Sprite;
-        if (m.active) {
+        if (m.active && m.visible) {
           const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, m.x, m.y);
           if (dist < minDistance) {
             minDistance = dist;
@@ -1521,7 +1579,7 @@ export class GameScene extends Phaser.Scene {
       // Do not cancel targetMonster so player can click to attack while moving
     }
     
-    if (this.targetMonster && this.targetMonster.active) {
+    if (this.targetMonster && this.targetMonster.active && this.targetMonster.visible) {
       const distance = Phaser.Math.Distance.Between(this.player.x, this.player.y, this.targetMonster.x, this.targetMonster.y);
       const isRanged = this.playerStats.equippedWeapon === 'bow' || this.playerStats.equippedWeapon === 'staff';
       const attackRange = isRanged ? 150 : 50;
@@ -1545,9 +1603,37 @@ export class GameScene extends Phaser.Scene {
       }
     }
 
+    // Play footstep sound if moving
+    if (this.player.body.velocity.lengthSq() > 10) {
+      if (this.time.now - this.lastFootstepTime > 400) {
+        this.playSound('sfx_footstep', { volume: 0.3 });
+        this.lastFootstepTime = this.time.now;
+      }
+    }
+
     // Update monsters to keep following player (Aggro system with simple pathfinding)
     this.monsters.getChildren().forEach((m) => {
       const monster = m as Phaser.Physics.Arcade.Sprite;
+      if (!monster.active || !monster.visible) return;
+      
+      const nameTag = monster.getData('nameTag');
+      if (nameTag && !monster.getData('isBoss')) nameTag.setPosition(monster.x, monster.y - 20);
+      
+      const hpBar = monster.getData('hpBar');
+      if (hpBar && !monster.getData('isBoss')) {
+        hpBar.clear();
+        const hp = monster.getData('hp');
+        const maxHp = monster.getData('maxHp');
+        const width = 30;
+        const height = 4;
+        const x = monster.x - width / 2;
+        const y = monster.y - 15;
+        hpBar.fillStyle(0x000000);
+        hpBar.fillRect(x, y, width, height);
+        hpBar.fillStyle(0xff0000);
+        hpBar.fillRect(x, y, width * (hp / maxHp), height);
+      }
+
       const dist = Phaser.Math.Distance.Between(this.player.x, this.player.y, monster.x, monster.y);
       
       // Don't aggro if player is in town (safe zone) or dead

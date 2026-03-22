@@ -15,6 +15,19 @@ export class BootScene extends Phaser.Scene {
     // this.load.image('wall', '/assets/wall.png');
     // this.load.image('grass', '/assets/grass.png');
 
+    // [오디오 에셋 교체 안내]
+    // BGM 및 효과음을 적용하려면 public/assets/ 폴더에 오디오 파일을 업로드하고
+    // 아래 주석을 해제하세요. (mp3, wav 등 지원)
+    this.load.audio('bgm', '/assets/bgm.mp3');
+    this.load.audio('sfx_attack', '/assets/attack.wav');
+    this.load.audio('sfx_hit', '/assets/hit.wav');
+    this.load.audio('sfx_item', '/assets/item.wav');
+    this.load.audio('sfx_level_up', '/assets/level.wav');
+    this.load.audio('sfx_click', '/assets/click1.wav');
+    this.load.audio('sfx_cloth', '/assets/cloth.wav');
+    this.load.audio('sfx_coins', '/assets/Coins.wav');
+    this.load.audio('sfx_footstep', '/assets/footstep.wav');
+
     // 현재는 이미지가 없을 경우를 대비해 코드로 임시 픽셀 그래픽을 생성합니다.
     // GameScene에서 텍스처를 생성하므로 여기서는 생성하지 않습니다.
   }

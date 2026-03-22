@@ -18,6 +18,17 @@ interface RPGPageProps {
 
 const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
   useEffect(() => {
+    const handleGlobalClick = (e: MouseEvent) => {
+      const target = e.target as HTMLElement;
+      if (target.closest('button') || target.closest('.cursor-pointer')) {
+        window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_click', config: { volume: 0.8 } } }));
+      }
+    };
+    document.addEventListener('click', handleGlobalClick);
+    return () => document.removeEventListener('click', handleGlobalClick);
+  }, []);
+
+  useEffect(() => {
     const usersRef = ref(rtdb, 'users');
     onValue(usersRef, (snapshot) => {
       const data = snapshot.val();
@@ -455,20 +466,20 @@ const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
       window.dispatchEvent(new CustomEvent('player-teleport', { detail: { x: 800, y: 800 } }));
     } 
     // Weapons
-    else if (id === 'weapon_sickle') { unequipInternal('weapon'); newStats.atk += 3; newStats.equippedWeapon = 'sickle'; systemMsg = '낫을 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_sword') { unequipInternal('weapon'); newStats.atk += 7; newStats.equippedWeapon = 'sword'; systemMsg = '철검을 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_mace') { unequipInternal('weapon'); newStats.atk += 12; newStats.equippedWeapon = 'mace'; systemMsg = '철퇴를 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_chalk') { unequipInternal('weapon'); newStats.atk += 4; newStats.equippedWeapon = 'chalk'; systemMsg = '분필을 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_book') { unequipInternal('weapon'); newStats.atk += 9; newStats.equippedWeapon = 'book'; systemMsg = '마도서를 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_staff') { unequipInternal('weapon'); newStats.atk += 15; newStats.equippedWeapon = 'staff'; systemMsg = '마법 지팡이를 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_spear') { unequipInternal('weapon'); newStats.atk += 6; newStats.equippedWeapon = 'spear'; systemMsg = '창을 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_bow') { unequipInternal('weapon'); newStats.atk += 10; newStats.equippedWeapon = 'bow'; systemMsg = '활을 장착했습니다.'; popupOnly = true; }
-    else if (id === 'weapon_shotgun') { unequipInternal('weapon'); newStats.atk += 18; newStats.equippedWeapon = 'shotgun'; systemMsg = '엽총을 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_sickle') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 3; newStats.equippedWeapon = 'sickle'; systemMsg = '낫을 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_sword') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 7; newStats.equippedWeapon = 'sword'; systemMsg = '철검을 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_mace') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 12; newStats.equippedWeapon = 'mace'; systemMsg = '철퇴를 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_chalk') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 4; newStats.equippedWeapon = 'chalk'; systemMsg = '분필을 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_book') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 9; newStats.equippedWeapon = 'book'; systemMsg = '마도서를 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_staff') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 15; newStats.equippedWeapon = 'staff'; systemMsg = '마법 지팡이를 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_spear') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 6; newStats.equippedWeapon = 'spear'; systemMsg = '창을 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_bow') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 10; newStats.equippedWeapon = 'bow'; systemMsg = '활을 장착했습니다.'; popupOnly = true; }
+    else if (id === 'weapon_shotgun') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('weapon'); newStats.atk += 18; newStats.equippedWeapon = 'shotgun'; systemMsg = '엽총을 장착했습니다.'; popupOnly = true; }
     // Armor
-    else if (id === 'armor_shield') { unequipInternal('armor'); newStats.def += 4; newStats.equippedArmor = 'shield'; systemMsg = '방패를 장착했습니다.'; }
-    else if (id === 'armor_iron') { unequipInternal('armor'); newStats.def += 10; newStats.equippedArmor = 'iron'; systemMsg = '철갑옷을 장착했습니다.'; }
-    else if (id === 'armor_fur') { unequipInternal('armor'); newStats.def += 3; newStats.equippedArmor = 'fur'; systemMsg = '털가죽 옷을 장착했습니다.'; }
-    else if (id === 'armor_leather') { unequipInternal('armor'); newStats.def += 7; newStats.equippedArmor = 'leather'; systemMsg = '가죽갑옷을 장착했습니다.'; }
+    else if (id === 'armor_shield') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('armor'); newStats.def += 4; newStats.equippedArmor = 'shield'; systemMsg = '방패를 장착했습니다.'; }
+    else if (id === 'armor_iron') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('armor'); newStats.def += 10; newStats.equippedArmor = 'iron'; systemMsg = '철갑옷을 장착했습니다.'; }
+    else if (id === 'armor_fur') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('armor'); newStats.def += 3; newStats.equippedArmor = 'fur'; systemMsg = '털가죽 옷을 장착했습니다.'; }
+    else if (id === 'armor_leather') { window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } })); unequipInternal('armor'); newStats.def += 7; newStats.equippedArmor = 'leather'; systemMsg = '가죽갑옷을 장착했습니다.'; }
 
     setInventory(newInventory);
     setStats(newStats);
@@ -489,6 +500,7 @@ const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
     let newStats = { ...stats };
     let newInventory = [...inventory];
     let itemName = '';
+    window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_cloth', config: { volume: 0.8 } } }));
 
     if (type === 'weapon') {
       if (!stats.equippedWeapon) return;
@@ -546,6 +558,7 @@ const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
 
   const handleBuyItem = (item: any) => {
     if (stats.gold >= item.price) {
+      window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_coins', config: { volume: 0.8 } } }));
       const newGold = stats.gold - item.price;
       setStats(s => ({ ...s, gold: newGold }));
       window.dispatchEvent(new CustomEvent('update-player-stats', { detail: { gold: newGold } }));
@@ -564,6 +577,7 @@ const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
   };
 
   const handleSellItem = (item: any) => {
+    window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_coins', config: { volume: 0.8 } } }));
     const sellPrice = Math.floor((item.price || 10) * 0.5);
     const newGold = stats.gold + sellPrice;
     setStats(s => ({ ...s, gold: newGold }));
@@ -578,6 +592,7 @@ const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
   };
 
   const handleSellAll = (item: any) => {
+    window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_coins', config: { volume: 0.8 } } }));
     const count = item.count;
     const sellPrice = Math.floor((item.price || 10) * 0.5) * count;
     const newGold = stats.gold + sellPrice;
@@ -1040,6 +1055,7 @@ const RPGPage: React.FC<RPGPageProps> = ({ user }) => {
                 const quest = quests.find(q => q.id === id);
                 if (!quest) return;
                 
+                window.dispatchEvent(new CustomEvent('play-sound', { detail: { key: 'sfx_coins', config: { volume: 0.8 } } }));
                 const newExp = stats.exp + quest.rewardExp;
                 const newGold = stats.gold + quest.rewardGold;
                 const newStats = { ...stats, exp: newExp, gold: newGold };
