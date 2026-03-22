@@ -487,6 +487,18 @@ export class GameScene extends Phaser.Scene {
     window.addEventListener('toggle-minimap', toggleMinimapHandler);
 
     const playSoundHandler = (e: any) => {
+      // Resume audio context if suspended (browser autoplay policy)
+      if (this.sound instanceof Phaser.Sound.WebAudioSoundManager) {
+        if (this.sound.context.state === 'suspended') {
+          this.sound.context.resume().then(() => {
+            // If BGM was supposed to be playing but isn't, start it
+            if (this.sound.get('bgm') && !this.sound.get('bgm').isPlaying) {
+              this.sound.play('bgm', { loop: true, volume: 0.3 });
+            }
+          });
+        }
+      }
+
       if (e.detail && e.detail.key) {
         this.playSound(e.detail.key, e.detail.config);
       }
@@ -520,6 +532,18 @@ export class GameScene extends Phaser.Scene {
 
     // Touch/Click movement
     this.input.on('pointerdown', (pointer: Phaser.Input.Pointer) => {
+      // Resume audio context if suspended (browser autoplay policy)
+      if (this.sound instanceof Phaser.Sound.WebAudioSoundManager) {
+        if (this.sound.context.state === 'suspended') {
+          this.sound.context.resume().then(() => {
+            // If BGM was supposed to be playing but isn't, start it
+            if (this.sound.get('bgm') && !this.sound.get('bgm').isPlaying) {
+              this.sound.play('bgm', { loop: true, volume: 0.3 });
+            }
+          });
+        }
+      }
+
       // UI 버튼 클릭 여부 확인
       const objectsUnderPointer = this.input.hitTestPointer(pointer);
       if (objectsUnderPointer.length > 0) return;

@@ -21,6 +21,10 @@ export const initGame = (parent: HTMLElement, user: User | null, playerData: any
     scale: {
       mode: Phaser.Scale.RESIZE,
       autoCenter: Phaser.Scale.CENTER_BOTH
+    },
+    audio: {
+      disableWebAudio: false,
+      noAudio: false
     }
   };
 
