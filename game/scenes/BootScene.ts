@@ -22,19 +22,19 @@ export class BootScene extends Phaser.Scene {
     this.load.on('loaderror', (file: any) => console.error('Error loading file:', file.src, file.key));
 
     const baseUrl = import.meta.env.BASE_URL || '/';
-    const assetsPath = baseUrl.endsWith('/') ? baseUrl + 'assets/' : baseUrl + '/assets/';
+    const audioPath = baseUrl.endsWith('/') ? baseUrl + 'audio/' : baseUrl + '/audio/';
     
-    console.log('Loading audio from:', assetsPath);
+    console.log('Loading audio from:', audioPath);
 
-    this.load.audio('bgm', `${assetsPath}bgm.mp3`);
-    this.load.audio('sfx_attack', `${assetsPath}attack.wav`);
-    this.load.audio('sfx_hit', `${assetsPath}hit.wav`);
-    this.load.audio('sfx_item', `${assetsPath}item.wav`);
-    this.load.audio('sfx_level_up', `${assetsPath}level.wav`);
-    this.load.audio('sfx_click', `${assetsPath}click1.wav`);
-    this.load.audio('sfx_cloth', `${assetsPath}cloth.wav`);
-    this.load.audio('sfx_coins', `${assetsPath}Coins.wav`);
-    this.load.audio('sfx_footstep', `${assetsPath}footstep.wav`);
+    this.load.audio('bgm', `${audioPath}bgm.mp3`);
+    this.load.audio('sfx_attack', `${audioPath}attack.wav`);
+    this.load.audio('sfx_hit', `${audioPath}hit.wav`);
+    this.load.audio('sfx_item', `${audioPath}item.wav`);
+    this.load.audio('sfx_level_up', `${audioPath}level.wav`);
+    this.load.audio('sfx_click', `${audioPath}click1.wav`);
+    this.load.audio('sfx_cloth', `${audioPath}cloth.wav`);
+    this.load.audio('sfx_coins', `${audioPath}Coins.wav`);
+    this.load.audio('sfx_footstep', `${audioPath}footstep.wav`);
 
     // 현재는 이미지가 없을 경우를 대비해 코드로 임시 픽셀 그래픽을 생성합니다.
     // GameScene에서 텍스처를 생성하므로 여기서는 생성하지 않습니다.
