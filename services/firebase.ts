@@ -16,7 +16,7 @@ import {
   setDoc,
   getDoc
 } from 'firebase/firestore';
-import { getAuth, signInWithEmailAndPassword, signOut, onAuthStateChanged, User } from 'firebase/auth';
+import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
 import { GuestbookEntry, ContentItem, Comment, RoomItem, BackgroundConfig } from '../types';
 
@@ -92,14 +92,25 @@ function handleFirestoreError(error: unknown, operationType: OperationType, path
 
 // --- 웹사이트 기능 ---
 
-// 관리자 로그인 기능
+// 관리자 로그인 기능 (이메일/비밀번호)
 export const loginAdmin = async (email: string, pass: string) => {
-  return signInWithEmailAndPassword(auth, email, pass);
+  return await signInWithEmailAndPassword(auth, email, pass);
+};
+
+// 구글 로그인 기능
+export const loginWithGoogle = async () => {
+  const provider = new GoogleAuthProvider();
+  return signInWithPopup(auth, provider);
 };
 
 // 로그아웃 기능
 export const logoutAdmin = async () => {
   return signOut(auth);
+};
+
+// 비밀번호 재설정 기능
+export const resetAdminPassword = async (email: string) => {
+  return sendPasswordResetEmail(auth, email);
 };
 
 // 로그인 상태 감시

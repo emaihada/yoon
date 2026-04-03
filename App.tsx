@@ -6,9 +6,8 @@ import AdminModal from './components/AdminModal';
 import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Log from './pages/Log';
-import Gallery from './pages/Gallery';
 import GuestbookPage from './pages/GuestbookPage';
-import FortunePage from './pages/FortunePage';
+import PictureDiaryPage from './pages/PictureDiaryPage';
 import RPGPage from './pages/RPGPage';
 
 const App: React.FC = () => {
@@ -49,11 +48,10 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Home user={user} />} />
             <Route path="/guestbook" element={<GuestbookPage user={user} />} />
-            <Route path="/fortune" element={<FortunePage user={user} />} />
+            <Route path="/picture-diary" element={<PictureDiaryPage user={user} />} />
             <Route path="/rpg" element={<RPGPage user={user} />} />
             <Route path="/log" element={<Log user={user} />} />
             <Route path="/log/:id" element={<Log user={user} />} />
-            <Route path="/gallery" element={<Gallery user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
 

@@ -1,5 +1,5 @@
 import React, { useState, useEffect } from 'react';
-import { loginAdmin, logoutAdmin, getVisitorCount } from '../services/firebase';
+import { loginAdmin, logoutAdmin, getVisitorCount, resetAdminPassword } from '../services/firebase';
 import { User } from 'firebase/auth';
 import { X, Lock, LogOut, Users } from 'lucide-react';
 
@@ -12,6 +12,7 @@ const AdminModal: React.FC<AdminModalProps> = ({ user }) => {
   const [email, setEmail] = useState('');
   const [password, setPassword] = useState('');
   const [error, setError] = useState('');
+  const [message, setMessage] = useState('');
   const [visitorCount, setVisitorCount] = useState<number | null>(null);
 
   // Fetch visitor count when modal opens and user is logged in
@@ -24,6 +25,7 @@ const AdminModal: React.FC<AdminModalProps> = ({ user }) => {
   const handleLogin = async (e: React.FormEvent) => {
     e.preventDefault();
     setError('');
+    setMessage('');
     
     try {
       await loginAdmin(email, password);
@@ -37,8 +39,32 @@ const AdminModal: React.FC<AdminModalProps> = ({ user }) => {
         setError('이메일 또는 비밀번호가 올바르지 않습니다.');
       } else if (err.code === 'auth/too-many-requests') {
         setError('로그인 시도가 너무 많습니다. 잠시 후 다시 시도해주세요.');
+      } else if (err.code === 'auth/operation-not-allowed') {
+        setError('Firebase Console에서 Email/Password 로그인을 활성화해주세요.');
+      } else if (err.code === 'auth/weak-password') {
+        setError('비밀번호는 6자리 이상이어야 합니다.');
       } else {
         setError('로그인 오류: ' + (err.code || err.message));
+      }
+    }
+  };
+
+  const handleResetPassword = async () => {
+    if (!email) {
+      setError('비밀번호를 재설정할 이메일을 입력해주세요.');
+      return;
+    }
+    setError('');
+    setMessage('');
+    try {
+      await resetAdminPassword(email);
+      setMessage('비밀번호 재설정 이메일이 전송되었습니다. 이메일함을 확인해주세요.');
+    } catch (err: any) {
+      console.error("Reset Password Error:", err);
+      if (err.code === 'auth/user-not-found') {
+        setError('가입되지 않은 이메일입니다.');
+      } else {
+        setError('비밀번호 재설정 오류: ' + (err.code || err.message));
       }
     }
   };
@@ -124,6 +150,12 @@ const AdminModal: React.FC<AdminModalProps> = ({ user }) => {
                     {error}
                   </div>
                 )}
+
+                {message && (
+                  <div className="bg-green-50 text-green-600 text-xs p-2 rounded border border-green-100">
+                    {message}
+                  </div>
+                )}
                 
                 <button 
                   type="submit"
@@ -131,6 +163,16 @@ const AdminModal: React.FC<AdminModalProps> = ({ user }) => {
                 >
                   로그인
                 </button>
+
+                <div className="flex justify-end">
+                  <button 
+                    type="button"
+                    onClick={handleResetPassword}
+                    className="text-[10px] text-gray-500 hover:text-cy-blue underline clickable"
+                  >
+                    비밀번호를 잊으셨나요?
+                  </button>
+                </div>
 
                 <div className="text-[10px] text-gray-400 text-center">
                   * Firebase Console에서 Authentication &gt; Email/Password가 활성화되어 있어야 하며, 해당 이메일의 사용자가 등록되어 있어야 합니다.

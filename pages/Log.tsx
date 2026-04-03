@@ -52,7 +52,7 @@ const Log: React.FC<PageProps> = ({ user }) => {
             onClick={() => navigate('/log')} 
             className="cursor-pointer hover:underline hover:text-cy-blue transition-colors"
           >
-            다이어리
+            블로그
           </span>
           <span className="text-gray-300 text-sm font-hand">&gt;</span>
           <span>읽기</span>
@@ -61,7 +61,7 @@ const Log: React.FC<PageProps> = ({ user }) => {
     }
     
     // Standard title for list view
-    return "다이어리";
+    return "블로그";
   };
 
   // If loading a specific post
@@ -103,7 +103,7 @@ const Log: React.FC<PageProps> = ({ user }) => {
         showTitleInput
         showImageInput // Enable image URL input for Blog
         displayMode="blog"
-        placeholder="오늘의 다이어리를 작성해보세요..."
+        placeholder="오늘의 블로그를 작성해보세요..."
         onItemClick={(item) => navigate(`/log/${item.id}`)}
       />
     </Layout>

@@ -1,13 +1,12 @@
 import React from 'react';
-import { Home, BookOpen, Image, MessageSquareText, Sparkles, Gamepad2 } from 'lucide-react';
+import { Home, BookOpen, Image, MessageSquareText, CalendarHeart, Gamepad2 } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
 
 const tabs = [
   { id: 'home', label: '홈', icon: Home, path: '/' },
   { id: 'guestbook', label: '방명록', icon: MessageSquareText, path: '/guestbook' },
-  { id: 'fortune', label: '운세', icon: Sparkles, path: '/fortune' },
-  { id: 'log', label: '다이어리', icon: BookOpen, path: '/log' },
-  { id: 'gallery', label: '사진첩', icon: Image, path: '/gallery' },
+  { id: 'log', label: '블로그', icon: BookOpen, path: '/log' },
+  { id: 'picture-diary', label: '그림일기', icon: CalendarHeart, path: '/picture-diary' },
   { id: 'rpg', label: 'RPG', icon: Gamepad2, path: '/rpg' },
 ];
 

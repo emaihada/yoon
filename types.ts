@@ -26,6 +26,7 @@ export interface ContentItem {
   isPinned?: boolean; // New field for top-fixed posts
   views?: number; // New field for post view count
   isSecret?: boolean; // New field for secret posts
+  dateString?: string; // New field for calendar date (YYYY-MM-DD)
 }
 
 export type SectionType = 'home' | 'about' | 'taste' | 'log';
