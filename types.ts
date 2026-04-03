@@ -25,6 +25,7 @@ export interface ContentItem {
   likeCount?: number; // New field for likes
   isPinned?: boolean; // New field for top-fixed posts
   views?: number; // New field for post view count
+  isSecret?: boolean; // New field for secret posts
 }
 
 export type SectionType = 'home' | 'about' | 'taste' | 'log';

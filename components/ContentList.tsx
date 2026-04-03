@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { addContentItem, deleteContentItem, updateContentItem, subscribeToContent, toggleContentPin } from '../services/firebase';
 import { ContentItem } from '../types';
-import { Trash2, PlusCircle, ArrowRight, Image as ImageIcon, Pin, HelpCircle, X, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Eye, Link as LinkIcon } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowRight, Image as ImageIcon, Pin, HelpCircle, X, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Eye, Link as LinkIcon, Lock } from 'lucide-react';
 import MemoItem from './MemoItem';
 import ConfirmModal from './ConfirmModal';
 
@@ -38,6 +38,7 @@ const ContentList: React.FC<ContentListProps> = ({
   const [newItemLink, setNewItemLink] = useState('');
   const [galleryImageUrl, setGalleryImageUrl] = useState(''); // Specific state for gallery URL input
   const [isImageIncluded, setIsImageIncluded] = useState(false); 
+  const [isSecret, setIsSecret] = useState(false); // New state for secret posts
   const [showMarkdownGuide, setShowMarkdownGuide] = useState(false);
   
   // Markdown Guide Accordion State
@@ -60,6 +61,7 @@ const ContentList: React.FC<ContentListProps> = ({
     setNewItemLink('');
     setGalleryImageUrl('');
     setIsImageIncluded(false);
+    setIsSecret(false);
     setEditingId(null);
   };
 
@@ -69,6 +71,7 @@ const ContentList: React.FC<ContentListProps> = ({
     setNewItemTitle(item.title || '');
     setNewItemText(item.content);
     setNewItemLink(item.link || '');
+    setIsSecret(!!item.isSecret);
     
     if (inputMode === 'gallery') {
       setGalleryImageUrl(item.imageUrl || '');
@@ -107,6 +110,7 @@ const ContentList: React.FC<ContentListProps> = ({
 
     const payload: any = {
       content: inputMode === 'gallery' ? 'Gallery Image' : newItemText, // Default content for gallery
+      isSecret: isSecret,
     };
 
     if (showTitleInput || inputMode === 'gallery') payload.title = newItemTitle;
@@ -403,6 +407,21 @@ const ContentList: React.FC<ContentListProps> = ({
                       이미지 포함
                     </button>
                 )}
+                
+                {category === 'blog' && (
+                    <button
+                      type="button"
+                      onClick={() => setIsSecret(!isSecret)}
+                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-bold transition-all ${
+                        isSecret 
+                          ? 'bg-red-50 border-red-200 text-red-600' 
+                          : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
+                      }`}
+                    >
+                      {isSecret ? <CheckSquare size={16} /> : <Square size={16} />}
+                      비밀글
+                    </button>
+                )}
               </div>
             </>
           )}
@@ -419,7 +438,7 @@ const ContentList: React.FC<ContentListProps> = ({
       {/* Special Rendering for Memo Category */}
       {category === 'memo' ? (
         <div className="space-y-2">
-          {items.map(item => (
+          {items.filter(item => isAdmin || !item.isSecret).map(item => (
             <MemoItem 
               key={item.id} 
               item={item} 
@@ -427,12 +446,12 @@ const ContentList: React.FC<ContentListProps> = ({
               onDelete={(id) => setDeleteId(id)} 
             />
           ))}
-          {items.length === 0 && <p className="text-gray-400 italic text-sm text-center py-4">아직 작성된 짧은 글이 없습니다.</p>}
+          {items.filter(item => isAdmin || !item.isSecret).length === 0 && <p className="text-gray-400 italic text-sm text-center py-4">아직 작성된 짧은 글이 없습니다.</p>}
         </div>
       ) : (
         /* Standard / Gallery Rendering */
         <div className={getContainerClass()}>
-          {items.map(item => {
+          {items.filter(item => isAdmin || !item.isSecret).map(item => {
             
             // --- GALLERY MODE ---
             if (displayMode === 'gallery') {
@@ -481,6 +500,11 @@ const ContentList: React.FC<ContentListProps> = ({
                       >
                         <Trash2 size={10} />
                       </button>
+                    </div>
+                  )}
+                  {item.isSecret && (
+                    <div className="absolute top-1 left-1 z-20 bg-black/50 p-1 rounded-full">
+                      <Lock size={10} className="text-white" />
                     </div>
                   )}
                 </div>
@@ -540,6 +564,9 @@ const ContentList: React.FC<ContentListProps> = ({
                        {item.isPinned && (
                           <Pin size={14} className="text-red-500 fill-red-500 shrink-0 mr-1" />
                        )}
+                       {item.isSecret && (
+                          <Lock size={14} className="text-gray-400 shrink-0 mr-1" />
+                       )}
                        <span className="font-bold text-base group-hover:text-cy-orange transition-colors truncate pl-1">
                          {item.title || "무제"}
                        </span>
@@ -575,6 +602,7 @@ const ContentList: React.FC<ContentListProps> = ({
                     {item.title && (
                       <div className="font-bold text-base mb-1 flex items-center gap-2 group-hover:text-cy-orange transition-colors">
                         {item.isPinned && <Pin size={14} className="text-red-500 fill-red-500" />}
+                        {item.isSecret && <Lock size={14} className="text-gray-400" />}
                         {item.title}
                       </div>
                     )}
@@ -596,7 +624,7 @@ const ContentList: React.FC<ContentListProps> = ({
               </div>
             );
           })}
-          {items.length === 0 && <p className="text-gray-300 italic text-sm col-span-full text-center py-8">아직 내용이 없습니다...</p>}
+          {items.filter(item => isAdmin || !item.isSecret).length === 0 && <p className="text-gray-300 italic text-sm col-span-full text-center py-8">아직 내용이 없습니다...</p>}
         </div>
       )}
     </div>

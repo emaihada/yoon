@@ -4,11 +4,11 @@ import { Link, useLocation } from 'react-router-dom';
 
 const tabs = [
   { id: 'home', label: '홈', icon: Home, path: '/' },
-  { id: 'rpg', label: 'RPG', icon: Gamepad2, path: '/rpg' },
   { id: 'guestbook', label: '방명록', icon: MessageSquareText, path: '/guestbook' },
   { id: 'fortune', label: '운세', icon: Sparkles, path: '/fortune' },
   { id: 'log', label: '다이어리', icon: BookOpen, path: '/log' },
   { id: 'gallery', label: '사진첩', icon: Image, path: '/gallery' },
+  { id: 'rpg', label: 'RPG', icon: Gamepad2, path: '/rpg' },
 ];
 
 const Navigation: React.FC = () => {

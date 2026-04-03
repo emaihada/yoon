@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
 import { ContentItem, Comment } from '../types';
 import { addComment, deleteComment, subscribeToComments, incrementPostViews, incrementPostLikes, decrementPostLikes } from '../services/firebase';
-import { ArrowLeft, Send, Trash2, MessageCircle, Smile, Eye, Heart } from 'lucide-react';
+import { ArrowLeft, Send, Trash2, MessageCircle, Smile, Eye, Heart, Lock } from 'lucide-react';
 import ConfirmModal from './ConfirmModal';
 import ReactMarkdown from 'react-markdown';
 import remarkGfm from 'remark-gfm';
@@ -113,7 +113,8 @@ const BlogPostDetail: React.FC<BlogPostDetailProps> = ({ post, isAdmin, onBack }
           >
             <ArrowLeft size={24} className="text-cy-dark" />
           </button>
-          <div className="flex-1">
+          <div className="flex-1 flex items-center gap-2">
+             {post.isSecret && <Lock size={20} className="text-gray-400 shrink-0" />}
              <h2 className="text-xl md:text-2xl font-bold font-pixel text-cy-dark break-keep leading-snug">
               {post.title || "무제"}
             </h2>

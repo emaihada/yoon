@@ -24,7 +24,12 @@ const Log: React.FC<PageProps> = ({ user }) => {
         setLoading(true);
         const post = await getContentItem(id);
         if (post) {
-          setSelectedPost(post);
+          if (post.isSecret && !user) {
+            alert('비밀글입니다.');
+            navigate('/log', { replace: true });
+          } else {
+            setSelectedPost(post);
+          }
         } else {
           // Post not found, go back to list
           navigate('/log', { replace: true });
@@ -36,7 +41,7 @@ const Log: React.FC<PageProps> = ({ user }) => {
     };
 
     fetchPost();
-  }, [id, navigate]);
+  }, [id, navigate, user]);
 
   // Custom title with breadcrumb for Detail View
   const getTitle = () => {
