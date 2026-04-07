@@ -2,6 +2,7 @@ import React, { useState, useEffect } from 'react';
 import Layout from '../components/Layout';
 import ContentList from '../components/ContentList';
 import BlogPostDetail from '../components/BlogPostDetail';
+import SubscribeBanner from '../components/SubscribeBanner';
 import { User } from 'firebase/auth';
 import { ContentItem } from '../types';
 import { useParams, useNavigate } from 'react-router-dom';
@@ -90,6 +91,9 @@ const Log: React.FC<PageProps> = ({ user }) => {
 
   return (
     <Layout title={getTitle()}>
+      {/* Subscribe Banner */}
+      <SubscribeBanner user={user} />
+
       {/* Warning Message moved from title to content area for better alignment */}
       <div className="mb-4 text-center">
         <span className="text-[10px] md:text-xs font-normal text-gray-500 bg-gray-100 px-2 py-1 rounded inline-block whitespace-nowrap">

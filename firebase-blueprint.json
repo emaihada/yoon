@@ -118,6 +118,26 @@
         }
       },
       "required": ["items", "bgConfig", "updatedAt"]
+    },
+    "Subscriber": {
+      "title": "Subscriber",
+      "description": "A user subscribed to blog updates",
+      "type": "object",
+      "properties": {
+        "name": {
+          "type": "string",
+          "description": "Name of the subscriber"
+        },
+        "email": {
+          "type": "string",
+          "description": "Email of the subscriber"
+        },
+        "subscribedAt": {
+          "type": "number",
+          "description": "Timestamp of subscription"
+        }
+      },
+      "required": ["name", "email", "subscribedAt"]
     }
   },
   "firestore": {
@@ -140,6 +160,10 @@
     "miniroom/layout": {
       "schema": "MiniroomLayout",
       "description": "Miniroom layout document"
+    },
+    "subscribers": {
+      "schema": "Subscriber",
+      "description": "Collection of blog subscribers"
     }
   }
 }

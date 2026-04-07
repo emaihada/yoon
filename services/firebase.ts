@@ -18,6 +18,7 @@ import {
 } from 'firebase/firestore';
 import { getAuth, signInWithEmailAndPassword, createUserWithEmailAndPassword, signOut, onAuthStateChanged, sendPasswordResetEmail, signInWithPopup, GoogleAuthProvider, User } from 'firebase/auth';
 import { getDatabase } from 'firebase/database';
+import { getStorage } from 'firebase/storage';
 import { GuestbookEntry, ContentItem, Comment, RoomItem, BackgroundConfig } from '../types';
 
 // 1. 파이어베이스 설정 (진짜 키 적용됨)
@@ -37,6 +38,7 @@ const app = initializeApp(firebaseConfig);
 export const db = getFirestore(app);
 export const auth = getAuth(app);
 export const rtdb = getDatabase(app);
+export const storage = getStorage(app);
 
 // --- 에러 핸들링 기능 ---
 export enum OperationType {

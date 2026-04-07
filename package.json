@@ -10,6 +10,7 @@
     "lint": "tsc --noEmit"
   },
   "dependencies": {
+    "@emailjs/browser": "^4.4.1",
     "firebase": "^12.7.0",
     "lucide-react": "^0.562.0",
     "phaser": "^3.90.0",

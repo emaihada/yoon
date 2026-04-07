@@ -9,6 +9,7 @@ import Log from './pages/Log';
 import GuestbookPage from './pages/GuestbookPage';
 import PictureDiaryPage from './pages/PictureDiaryPage';
 import RPGPage from './pages/RPGPage';
+import SendEmail from './pages/SendEmail';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -52,6 +53,7 @@ const App: React.FC = () => {
             <Route path="/rpg" element={<RPGPage user={user} />} />
             <Route path="/log" element={<Log user={user} />} />
             <Route path="/log/:id" element={<Log user={user} />} />
+            <Route path="/email" element={<SendEmail user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
 

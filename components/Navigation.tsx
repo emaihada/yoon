@@ -1,8 +1,10 @@
-import React from 'react';
-import { Home, BookOpen, Image, MessageSquareText, CalendarHeart, Gamepad2 } from 'lucide-react';
+import React, { useState, useEffect } from 'react';
+import { Home, BookOpen, Image, MessageSquareText, CalendarHeart, Gamepad2, Send } from 'lucide-react';
 import { Link, useLocation } from 'react-router-dom';
+import { subscribeToAuth } from '../services/firebase';
+import { User } from 'firebase/auth';
 
-const tabs = [
+const baseTabs = [
   { id: 'home', label: '홈', icon: Home, path: '/' },
   { id: 'guestbook', label: '방명록', icon: MessageSquareText, path: '/guestbook' },
   { id: 'log', label: '블로그', icon: BookOpen, path: '/log' },
@@ -13,6 +15,18 @@ const tabs = [
 const Navigation: React.FC = () => {
   const location = useLocation();
   const currentPath = location.pathname;
+  const [user, setUser] = useState<User | null>(null);
+
+  useEffect(() => {
+    const unsubscribe = subscribeToAuth((currentUser) => {
+      setUser(currentUser);
+    });
+    return () => unsubscribe();
+  }, []);
+
+  const tabs = user 
+    ? [...baseTabs, { id: 'email', label: '메일보내기', icon: Send, path: '/email' }]
+    : baseTabs;
 
   return (
     <>

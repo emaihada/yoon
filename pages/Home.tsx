@@ -5,6 +5,7 @@ import { Instagram, Mail, X, Eye } from 'lucide-react';
 import { User } from 'firebase/auth';
 import FortuneCookie from '../components/FortuneCookie';
 import ContentList from '../components/ContentList';
+import SubscribeBanner from '../components/SubscribeBanner';
 import { incrementPostViews } from '../services/firebase';
 
 interface PageProps {
@@ -74,7 +75,7 @@ const Home: React.FC<PageProps> = ({ user }) => {
         
         {/* Profile Card (Centered & Expanded) */}
         <div className="w-full max-w-md mt-4">
-          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm text-center">
+          <div className="bg-white border border-gray-200 p-6 rounded-lg shadow-sm text-center relative">
             <div className="w-32 h-32 bg-gray-200 rounded-full mx-auto mb-6 overflow-hidden border-4 border-dashed border-cy-orange p-1">
               <img src="https://i.postimg.cc/0Nqz1gbM/1.jpg" alt="Profile" className="w-full h-full object-cover rounded-full" />
             </div>
@@ -107,6 +108,11 @@ const Home: React.FC<PageProps> = ({ user }) => {
               </div>
             </div>
           </div>
+        </div>
+
+        {/* Subscribe Banner */}
+        <div className="w-full">
+          <SubscribeBanner user={user} />
         </div>
 
         {/* Fortune Section */}

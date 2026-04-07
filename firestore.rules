@@ -65,6 +65,13 @@ service cloud.firestore {
              data.totalVisitors is number;
     }
 
+    function isValidSubscriber(data) {
+      return hasRequiredFields(['name', 'email', 'subscribedAt']) &&
+             data.name is string && data.name.size() > 0 && data.name.size() < 100 &&
+             data.email is string && data.email.matches("^[a-zA-Z0-9._%+-]+@[a-zA-Z0-9.-]+\\.[a-zA-Z]{2,}$") &&
+             data.subscribedAt is number;
+    }
+
     // ===============================================================
     // Match Rules
     // ===============================================================
@@ -111,6 +118,14 @@ service cloud.firestore {
     // Users: Admin only or self
     match /users/{userId} {
       allow read, write: if isAuthenticated() && (request.auth.uid == userId || isAdmin());
+    }
+
+    // Subscribers: Admin can read all, anyone can get specific, create or delete
+    match /subscribers/{email} {
+      allow get: if true;
+      allow list: if isAdmin();
+      allow create: if isValidSubscriber(request.resource.data);
+      allow delete: if true;
     }
   }
 }
