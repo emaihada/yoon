@@ -7,7 +7,6 @@ import ErrorBoundary from './components/ErrorBoundary';
 import Home from './pages/Home';
 import Log from './pages/Log';
 import GuestbookPage from './pages/GuestbookPage';
-import PictureDiaryPage from './pages/PictureDiaryPage';
 import RPGPage from './pages/RPGPage';
 import SendEmail from './pages/SendEmail';
 
@@ -49,7 +48,6 @@ const App: React.FC = () => {
           <Routes>
             <Route path="/" element={<Home user={user} />} />
             <Route path="/guestbook" element={<GuestbookPage user={user} />} />
-            <Route path="/picture-diary" element={<PictureDiaryPage user={user} />} />
             <Route path="/rpg" element={<RPGPage user={user} />} />
             <Route path="/log" element={<Log user={user} />} />
             <Route path="/log/:id" element={<Log user={user} />} />

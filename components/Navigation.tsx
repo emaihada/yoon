@@ -8,7 +8,6 @@ const baseTabs = [
   { id: 'home', label: '홈', icon: Home, path: '/' },
   { id: 'guestbook', label: '방명록', icon: MessageSquareText, path: '/guestbook' },
   { id: 'log', label: '블로그', icon: BookOpen, path: '/log' },
-  { id: 'picture-diary', label: '그림일기', icon: CalendarHeart, path: '/picture-diary' },
   { id: 'rpg', label: 'RPG', icon: Gamepad2, path: '/rpg' },
 ];
 
