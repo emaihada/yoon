@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { addContentItem, deleteContentItem, updateContentItem, subscribeToContent, toggleContentPin } from '../services/firebase';
+import { addContentItem, deleteContentItem, updateContentItem, subscribeToContent, toggleContentPin, getCategories, addCategory, deleteCategory } from '../services/firebase';
 import { ContentItem } from '../types';
-import { Trash2, PlusCircle, ArrowRight, Image as ImageIcon, Pin, HelpCircle, X, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Eye, Link as LinkIcon, Lock } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowRight, Image as ImageIcon, Pin, HelpCircle, X, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Eye, Link as LinkIcon, Lock, FolderPlus } from 'lucide-react';
 import MemoItem from './MemoItem';
 import ConfirmModal from './ConfirmModal';
 
@@ -32,6 +32,13 @@ const ContentList: React.FC<ContentListProps> = ({
 }) => {
   const [items, setItems] = useState<ContentItem[]>([]);
   
+  // Category State
+  const [subCategories, setSubCategories] = useState<string[]>([]);
+  const [selectedFilterCategory, setSelectedFilterCategory] = useState<string>('all');
+  const [newItemSubCategory, setNewItemSubCategory] = useState<string>('');
+  const [isAddingSubCategory, setIsAddingSubCategory] = useState(false);
+  const [newSubCategoryInput, setNewSubCategoryInput] = useState('');
+
   // Form State
   const [newItemText, setNewItemText] = useState('');
   const [newItemTitle, setNewItemTitle] = useState('');
@@ -50,38 +57,83 @@ const ContentList: React.FC<ContentListProps> = ({
   // Modal State
   const [deleteId, setDeleteId] = useState<string | null>(null);
 
+  // Draft State
+  const [draftSavedAt, setDraftSavedAt] = useState<number | null>(null);
+
   useEffect(() => {
     const unsubscribe = subscribeToContent(category, setItems);
     return () => unsubscribe();
   }, [category]);
 
-  const resetForm = () => {
-    setNewItemText('');
-    setNewItemTitle('');
-    setNewItemLink('');
-    setGalleryImageUrl('');
-    setIsImageIncluded(false);
-    setIsSecret(false);
-    setEditingId(null);
+  // Load subcategories
+  useEffect(() => {
+    if (category === 'blog' || category === 'diary') {
+      const fetchCategories = async () => {
+        const cats = await getCategories(category);
+        setSubCategories(cats);
+      };
+      fetchCategories();
+    }
+  }, [category]);
+
+  const handleAddNewCategory = async () => {
+    if (newSubCategoryInput.trim()) {
+      const updated = await addCategory(category, newSubCategoryInput.trim());
+      setSubCategories(updated);
+      setNewItemSubCategory(newSubCategoryInput.trim());
+      setNewSubCategoryInput('');
+      setIsAddingSubCategory(false);
+    }
   };
 
-  const handleEditClick = (e: React.MouseEvent, item: ContentItem) => {
-    e.stopPropagation();
-    setEditingId(item.id);
-    setNewItemTitle(item.title || '');
-    setNewItemText(item.content);
-    setNewItemLink(item.link || '');
-    setIsSecret(!!item.isSecret);
-    
-    if (inputMode === 'gallery') {
-      setGalleryImageUrl(item.imageUrl || '');
-    } else {
-      setIsImageIncluded(!!item.imageUrl);
+  // Load draft on mount
+  useEffect(() => {
+    if ((category === 'blog' || category === 'diary') && isAdmin) {
+      const draft = localStorage.getItem(`draft_${category}`);
+      if (draft) {
+        try {
+          const parsed = JSON.parse(draft);
+          if (!editingId && !newItemText && !newItemTitle) {
+            setNewItemTitle(parsed.title || '');
+            setNewItemText(parsed.content || '');
+            setIsSecret(!!parsed.isSecret);
+            setDraftSavedAt(parsed.savedAt || null);
+          }
+        } catch (e) {
+          console.error('Failed to parse draft', e);
+        }
+      }
     }
+  }, [category, isAdmin, editingId]); // Run when category or admin status changes
+
+  const saveDraft = (isManual = false) => {
+    if (category !== 'blog' && category !== 'diary') return;
+    if (!newItemText.trim() && !newItemTitle.trim()) return;
     
-    // Scroll to top to see form
-    window.scrollTo({ top: 0, behavior: 'smooth' });
+    const draftData = {
+      title: newItemTitle,
+      content: newItemText,
+      isSecret: isSecret,
+      savedAt: Date.now()
+    };
+    localStorage.setItem(`draft_${category}`, JSON.stringify(draftData));
+    setDraftSavedAt(draftData.savedAt);
+    if (isManual) {
+      alert('임시저장되었습니다.');
+    }
   };
+
+  // Auto-save draft
+  useEffect(() => {
+    if ((category === 'blog' || category === 'diary') && isAdmin && !editingId) {
+      const timer = setTimeout(() => {
+        if (newItemText.trim() || newItemTitle.trim()) {
+          saveDraft(false);
+        }
+      }, 5000); // 5 seconds auto-save debounce
+      return () => clearTimeout(timer);
+    }
+  }, [newItemText, newItemTitle, isSecret, category, isAdmin, editingId]);
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -111,6 +163,7 @@ const ContentList: React.FC<ContentListProps> = ({
     const payload: any = {
       content: inputMode === 'gallery' ? 'Gallery Image' : newItemText, // Default content for gallery
       isSecret: isSecret,
+      subCategory: newItemSubCategory || null
     };
 
     if (showTitleInput || inputMode === 'gallery') payload.title = newItemTitle;
@@ -132,7 +185,42 @@ const ContentList: React.FC<ContentListProps> = ({
       await addContentItem(payload);
     }
     
+    if (!editingId && (category === 'blog' || category === 'diary')) {
+      localStorage.removeItem(`draft_${category}`);
+      setDraftSavedAt(null);
+    }
+
     resetForm();
+  };
+
+  const resetForm = () => {
+    setNewItemText('');
+    setNewItemTitle('');
+    setNewItemLink('');
+    setGalleryImageUrl('');
+    setIsImageIncluded(false);
+    setIsSecret(false);
+    setNewItemSubCategory('');
+    setEditingId(null);
+  };
+
+  const handleEditClick = (e: React.MouseEvent, item: ContentItem) => {
+    e.stopPropagation();
+    setEditingId(item.id);
+    setNewItemTitle(item.title || '');
+    setNewItemText(item.content);
+    setNewItemLink(item.link || '');
+    setIsSecret(!!item.isSecret);
+    setNewItemSubCategory(item.subCategory || '');
+    
+    if (inputMode === 'gallery') {
+      setGalleryImageUrl(item.imageUrl || '');
+    } else {
+      setIsImageIncluded(!!item.imageUrl);
+    }
+    
+    // Scroll to top to see form
+    window.scrollTo({ top: 0, behavior: 'smooth' });
   };
 
   const confirmDelete = async () => {
@@ -269,8 +357,15 @@ const ContentList: React.FC<ContentListProps> = ({
                        <div><code className="text-blue-500">[링크텍스트](URL)</code></div>
                        <div className="text-gray-400 text-[10px]">예: [네이버](https://naver.com)</div>
                     </div>
-                    <div className="flex flex-col gap-1">
+                    <div className="flex flex-col gap-1 mb-2">
                        <div><code className="text-purple-500">![이미지설명](이미지주소URL)</code></div>
+                    </div>
+                    <div className="flex flex-col gap-1">
+                       <div className="text-gray-500 font-bold text-[10px]">동영상 (Video)</div>
+                       <div className="bg-gray-50 p-2 rounded border border-gray-100 font-mono leading-tight text-gray-700 text-[10px]">
+                         &lt;video src="(외부 영상 주소)" controls width="100%"&gt;<br/>
+                         &lt;/video&gt;
+                       </div>
                     </div>
                   </div>
                 )}
@@ -376,6 +471,65 @@ const ContentList: React.FC<ContentListProps> = ({
                 />
               )}
               
+              {(category === 'blog' || category === 'diary') && (
+                <div className="flex gap-2 mb-3">
+                  <select
+                    className="border border-gray-200 rounded p-1.5 text-sm bg-gray-50 focus:outline-none focus:border-cy-orange text-gray-700 flex-1 max-w-[200px]"
+                    value={newItemSubCategory}
+                    onChange={(e) => {
+                      if (e.target.value === 'new') {
+                        setIsAddingSubCategory(true);
+                        setNewItemSubCategory('');
+                      } else {
+                        setNewItemSubCategory(e.target.value);
+                        setIsAddingSubCategory(false);
+                      }
+                    }}
+                  >
+                    <option value="">카테고리 없음</option>
+                    {subCategories.map(cat => (
+                      <option key={cat} value={cat}>{cat}</option>
+                    ))}
+                    <option value="new">+ 새 카테고리 추가</option>
+                  </select>
+                  
+                  {isAddingSubCategory && (
+                    <div className="flex gap-1 flex-1">
+                      <input
+                        className="border border-gray-200 rounded p-1.5 text-sm bg-gray-50 flex-1 focus:outline-none focus:border-cy-orange"
+                        placeholder="새 카테고리 이름"
+                        value={newSubCategoryInput}
+                        onChange={e => setNewSubCategoryInput(e.target.value)}
+                        onKeyDown={e => {
+                          if (e.key === 'Enter') {
+                            e.preventDefault();
+                            handleAddNewCategory();
+                          }
+                        }}
+                      />
+                      <button 
+                        type="button" 
+                        onClick={handleAddNewCategory}
+                        className="bg-cy-dark text-white px-2 py-1.5 rounded text-xs font-bold hover:bg-gray-700"
+                      >
+                        추가
+                      </button>
+                      <button 
+                        type="button" 
+                        onClick={() => {
+                          setIsAddingSubCategory(false);
+                          setNewSubCategoryInput('');
+                          setNewItemSubCategory('');
+                        }}
+                        className="bg-gray-200 text-gray-600 px-2 py-1.5 rounded text-xs hover:bg-gray-300"
+                      >
+                        취소
+                      </button>
+                    </div>
+                  )}
+                </div>
+              )}
+
               <div className="flex flex-col gap-2">
                 <textarea 
                   className="w-full p-2 focus:outline-none resize-none h-60 border border-gray-200 rounded bg-gray-50/50 font-mono text-sm leading-relaxed" 
@@ -384,10 +538,10 @@ const ContentList: React.FC<ContentListProps> = ({
                 />
               </div>
 
-              <div className="space-y-2 mt-3 pt-2 border-t border-gray-100 flex flex-wrap items-center gap-4">
+              <div className="mt-3 pt-3 border-t border-gray-100 flex flex-wrap items-center gap-4">
                 {showLinkInput && (
                     <input 
-                    className="flex-1 min-w-[200px] p-2 focus:outline-none text-xs text-blue-500 bg-gray-50 rounded border border-gray-100" 
+                    className="flex-1 min-w-[200px] h-8 p-2 focus:outline-none text-xs text-blue-500 bg-gray-50 rounded border border-gray-100" 
                     placeholder="🔗 URL 링크 (선택사항)" 
                     value={newItemLink} onChange={e => setNewItemLink(e.target.value)} 
                   />
@@ -397,7 +551,7 @@ const ContentList: React.FC<ContentListProps> = ({
                     <button
                       type="button"
                       onClick={() => setIsImageIncluded(!isImageIncluded)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-bold transition-all ${
+                      className={`flex items-center justify-center gap-1.5 px-3 h-8 rounded border text-xs font-bold transition-all ${
                         isImageIncluded 
                           ? 'bg-blue-50 border-blue-200 text-blue-600' 
                           : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
@@ -408,11 +562,11 @@ const ContentList: React.FC<ContentListProps> = ({
                     </button>
                 )}
                 
-                {category === 'blog' && (
+                {(category === 'blog' || category === 'diary') && (
                     <button
                       type="button"
                       onClick={() => setIsSecret(!isSecret)}
-                      className={`flex items-center gap-1.5 px-3 py-1.5 rounded border text-xs font-bold transition-all ${
+                      className={`flex items-center justify-center gap-1.5 px-3 h-8 rounded border text-xs font-bold transition-all ${
                         isSecret 
                           ? 'bg-red-50 border-red-200 text-red-600' 
                           : 'bg-gray-50 border-gray-200 text-gray-500 hover:bg-gray-100'
@@ -426,7 +580,21 @@ const ContentList: React.FC<ContentListProps> = ({
             </>
           )}
 
-          <div className="flex justify-end mt-3">
+          <div className="flex justify-between items-center mt-3">
+             <div className="flex items-center gap-2">
+               {(category === 'blog' || category === 'diary') && !editingId && (
+                 <>
+                   <button type="button" onClick={() => saveDraft(true)} className="text-xs text-gray-500 hover:text-cy-dark bg-gray-100 px-3 py-1.5 rounded transition-colors">
+                     임시저장
+                   </button>
+                   {draftSavedAt && (
+                     <span className="text-[10px] text-gray-400 font-sans">
+                       {new Date(draftSavedAt).toLocaleTimeString()}
+                     </span>
+                   )}
+                 </>
+               )}
+             </div>
              <button type="submit" className={`text-white text-sm px-4 py-2 rounded clickable flex items-center gap-1 shadow-sm transition-colors ${editingId ? 'bg-cy-orange hover:bg-orange-600' : 'bg-cy-dark hover:bg-gray-700'}`}>
                {editingId ? <Edit2 size={16}/> : <PlusCircle size={16}/>} 
                {editingId ? '수정 완료' : '글 등록'}
@@ -435,10 +603,27 @@ const ContentList: React.FC<ContentListProps> = ({
         </form>
       )}
 
+      {/* Filter UI for Blog/Diary */}
+      {(category === 'blog' || category === 'diary') && subCategories.length > 0 && (
+        <div className="mb-4 flex items-center gap-2">
+          <span className="text-sm font-bold text-gray-500 shrink-0">카테고리</span>
+          <select
+            className="border border-gray-200 rounded p-1.5 text-sm bg-gray-50 focus:outline-none focus:border-cy-orange text-gray-700 min-w-[120px]"
+            value={selectedFilterCategory}
+            onChange={(e) => setSelectedFilterCategory(e.target.value)}
+          >
+            <option value="all">전체보기</option>
+            {subCategories.map(cat => (
+              <option key={cat} value={cat}>{cat}</option>
+            ))}
+          </select>
+        </div>
+      )}
+
       {/* Special Rendering for Memo Category */}
       {category === 'memo' ? (
         <div className="space-y-2">
-          {items.filter(item => isAdmin || !item.isSecret).map(item => (
+          {items.filter(item => (isAdmin || !item.isSecret)).map(item => (
             <MemoItem 
               key={item.id} 
               item={item} 
@@ -446,12 +631,16 @@ const ContentList: React.FC<ContentListProps> = ({
               onDelete={(id) => setDeleteId(id)} 
             />
           ))}
-          {items.filter(item => isAdmin || !item.isSecret).length === 0 && <p className="text-gray-400 italic text-sm text-center py-4">아직 작성된 짧은 글이 없습니다.</p>}
+          {items.filter(item => (isAdmin || !item.isSecret)).length === 0 && <p className="text-gray-400 italic text-sm text-center py-4">아직 작성된 짧은 글이 없습니다.</p>}
         </div>
       ) : (
         /* Standard / Gallery Rendering */
         <div className={getContainerClass()}>
-          {items.filter(item => isAdmin || !item.isSecret).map(item => {
+          {items.filter(item => {
+            if (!isAdmin && item.isSecret) return false;
+            if (selectedFilterCategory !== 'all' && item.subCategory !== selectedFilterCategory) return false;
+            return true;
+          }).map(item => {
             
             // --- GALLERY MODE ---
             if (displayMode === 'gallery') {
@@ -526,8 +715,8 @@ const ContentList: React.FC<ContentListProps> = ({
                 {/* Admin Actions: Pin & Edit & Delete */}
                 {isAdmin && (
                   <div className="absolute top-2 right-2 flex gap-1 z-10 bg-white/80 rounded px-1 backdrop-blur-sm shadow-sm group-hover:opacity-100 opacity-0 transition-opacity">
-                     {/* Pin Button for Blog */}
-                     {category === 'blog' && (
+                     {/* Pin Button for Blog and Diary */}
+                     {(category === 'blog' || category === 'diary') && (
                        <button
                          type="button"
                          onClick={(e) => handlePinClick(e, item.id, !!item.isPinned)}
@@ -559,22 +748,29 @@ const ContentList: React.FC<ContentListProps> = ({
                 {displayMode === 'blog' ? (
                   // Blog List View (Title Only)
                   <>
-                    <div className="flex items-center gap-1 overflow-hidden flex-1 min-w-0">
-                       {/* Pinned Badge for Everyone */}
-                       {item.isPinned && (
-                          <Pin size={14} className="text-red-500 fill-red-500 shrink-0 mr-1" />
-                       )}
-                       {item.isSecret && (
-                          <Lock size={14} className="text-gray-400 shrink-0 mr-1" />
-                       )}
-                       <span className="font-bold text-base group-hover:text-cy-orange transition-colors truncate pl-1">
-                         {item.title || "무제"}
-                       </span>
-                       {item.commentCount !== undefined && item.commentCount > 0 && (
-                          <span className="text-cy-orange text-xs font-pixel shrink-0 ml-1">
-                            [{item.commentCount}]
+                    <div className="flex flex-col gap-1 overflow-hidden flex-1 min-w-0">
+                       {item.subCategory && (
+                          <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded whitespace-nowrap self-start border border-gray-200 font-sans">
+                            {item.subCategory}
                           </span>
                        )}
+                       <div className="flex items-center gap-1 overflow-hidden w-full min-w-0">
+                         {/* Pinned Badge for Everyone */}
+                         {item.isPinned && (
+                            <Pin size={14} className="text-red-500 fill-red-500 shrink-0 mr-1" />
+                         )}
+                         {item.isSecret && (
+                            <Lock size={14} className="text-gray-400 shrink-0 mr-1" />
+                         )}
+                         <span className="font-bold text-base group-hover:text-cy-orange transition-colors truncate">
+                           {item.title || "무제"}
+                         </span>
+                         {item.commentCount !== undefined && item.commentCount > 0 && (
+                            <span className="text-cy-orange text-xs font-pixel shrink-0 ml-1">
+                              [{item.commentCount}]
+                            </span>
+                         )}
+                       </div>
                     </div>
                     
                     <div className="flex items-center gap-2 shrink-0 ml-2">

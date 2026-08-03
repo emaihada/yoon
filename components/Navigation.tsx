@@ -24,7 +24,11 @@ const Navigation: React.FC = () => {
   }, []);
 
   const tabs = user 
-    ? [...baseTabs, { id: 'email', label: '메일보내기', icon: Send, path: '/email' }]
+    ? [
+        ...baseTabs, 
+        { id: 'diary', label: '일기', icon: CalendarHeart, path: '/diary' },
+        { id: 'email', label: '메일보내기', icon: Send, path: '/email' }
+      ]
     : baseTabs;
 
   return (

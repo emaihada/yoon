@@ -145,6 +145,54 @@ export const getVisitorCount = async (): Promise<number> => {
   return 0;
 };
 
+export const getCategories = async (categoryType: string): Promise<string[]> => {
+  const docRef = doc(db, 'settings', `${categoryType}_categories`);
+  try {
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      return snap.data().list || [];
+    }
+  } catch (error) {
+    console.error('Error fetching categories:', error);
+  }
+  return [];
+};
+
+export const addCategory = async (categoryType: string, newCategory: string) => {
+  const docRef = doc(db, 'settings', `${categoryType}_categories`);
+  try {
+    const snap = await getDoc(docRef);
+    let list = [];
+    if (snap.exists()) {
+      list = snap.data().list || [];
+    }
+    if (!list.includes(newCategory)) {
+      list.push(newCategory);
+      await setDoc(docRef, { list }, { merge: true });
+    }
+    return list;
+  } catch (error) {
+    console.error('Error adding category:', error);
+    return [];
+  }
+};
+
+export const deleteCategory = async (categoryType: string, categoryToDelete: string) => {
+  const docRef = doc(db, 'settings', `${categoryType}_categories`);
+  try {
+    const snap = await getDoc(docRef);
+    if (snap.exists()) {
+      const list = snap.data().list || [];
+      const updatedList = list.filter((c: string) => c !== categoryToDelete);
+      await setDoc(docRef, { list: updatedList }, { merge: true });
+      return updatedList;
+    }
+  } catch (error) {
+    console.error('Error deleting category:', error);
+  }
+  return [];
+};
+
 // --- 방명록 관련 기능 ---
 export const addGuestbookEntry = async (name: string, content: string) => {
   try {

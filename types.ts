@@ -27,6 +27,7 @@ export interface ContentItem {
   views?: number; // New field for post view count
   isSecret?: boolean; // New field for secret posts
   dateString?: string; // New field for calendar date (YYYY-MM-DD)
+  subCategory?: string; // Optional sub category for blogs and diaries
 }
 
 export type SectionType = 'home' | 'about' | 'taste' | 'log';

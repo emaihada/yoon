@@ -29,8 +29,10 @@ const BlogPostDetail: React.FC<BlogPostDetailProps> = ({ post, isAdmin, onBack }
     // 1. Subscribe to comments
     const unsubscribe = subscribeToComments(post.id, setComments);
 
-    // 2. Increment view count (once per mount)
-    incrementPostViews(post.id);
+    // 2. Increment view count (once per mount) - Only if not admin
+    if (!isAdmin) {
+      incrementPostViews(post.id);
+    }
 
     // 3. Check LocalStorage for Like status
     const likedKey = `liked_${post.id}`;
@@ -39,7 +41,7 @@ const BlogPostDetail: React.FC<BlogPostDetailProps> = ({ post, isAdmin, onBack }
     }
 
     return () => unsubscribe();
-  }, [post.id]);
+  }, [post.id, isAdmin]);
 
   // Sync likes state with prop updates (if real-time update comes in)
   useEffect(() => {
@@ -113,8 +115,13 @@ const BlogPostDetail: React.FC<BlogPostDetailProps> = ({ post, isAdmin, onBack }
           >
             <ArrowLeft size={24} className="text-cy-dark" />
           </button>
-          <div className="flex-1 flex items-center gap-2">
+          <div className="flex-1 flex flex-wrap items-center gap-2">
              {post.isSecret && <Lock size={20} className="text-gray-400 shrink-0" />}
+             {post.subCategory && (
+                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded border border-gray-200 font-sans shrink-0">
+                  {post.subCategory}
+                </span>
+             )}
              <h2 className="text-xl md:text-2xl font-bold font-pixel text-cy-dark break-keep leading-snug">
               {post.title || "무제"}
             </h2>
@@ -126,7 +133,7 @@ const BlogPostDetail: React.FC<BlogPostDetailProps> = ({ post, isAdmin, onBack }
             {isAdmin && (
               <div className="flex items-center gap-1">
                 <Eye size={12} />
-                <span>Hit: {post.views ? post.views + 1 : 1}</span> 
+                <span>Hit: {post.views || 0}</span> 
               </div>
             )}
           </div>

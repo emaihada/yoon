@@ -38,7 +38,9 @@ const Home: React.FC<PageProps> = ({ user }) => {
 
   const handlePostClick = (item: ContentItem) => {
     setSelectedPost(item);
-    incrementPostViews(item.id);
+    if (!user) {
+      incrementPostViews(item.id);
+    }
   };
 
   const closeLightbox = () => {
@@ -203,7 +205,7 @@ const Home: React.FC<PageProps> = ({ user }) => {
                   {user && (
                     <div className="flex items-center gap-1">
                       <Eye size={12} />
-                      <span>{selectedPost.views ? selectedPost.views + 1 : 1}</span>
+                      <span>{selectedPost.views || 0}</span>
                     </div>
                   )}
                </div>

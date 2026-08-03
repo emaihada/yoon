@@ -107,12 +107,6 @@ const AdminModal: React.FC<AdminModalProps> = ({ user }) => {
                 <div className="bg-gray-50 p-4 rounded border border-gray-100 mb-4">
                   <p className="text-green-600 font-bold mb-1">{user.email}</p>
                   <p className="text-xs text-gray-500 mb-3">관리자 계정으로 접속 중입니다.</p>
-                  
-                  {/* Total Visitors Display */}
-                  <div className="flex items-center justify-center gap-2 text-cy-orange font-bold font-pixel text-lg border-t border-gray-200 pt-3 mt-2">
-                    <Users size={20} />
-                    <span>Total: {visitorCount !== null ? visitorCount.toLocaleString() : '...'}</span>
-                  </div>
                 </div>
 
                 <button 

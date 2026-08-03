@@ -9,6 +9,7 @@ import Log from './pages/Log';
 import GuestbookPage from './pages/GuestbookPage';
 import RPGPage from './pages/RPGPage';
 import SendEmail from './pages/SendEmail';
+import Diary from './pages/Diary';
 
 const App: React.FC = () => {
   const [user, setUser] = useState<User | null>(null);
@@ -18,17 +19,20 @@ const App: React.FC = () => {
     // Auth Check
     const unsubscribe = subscribeToAuth((currentUser) => {
       setUser(currentUser);
+      
+      // Visitor Counter Logic (Execute once per session)
+      const sessionKey = 'hasVisitedSession';
+      if (!sessionStorage.getItem(sessionKey)) {
+        sessionStorage.setItem(sessionKey, 'true'); // mark as visited regardless of admin/not to prevent multiple triggers
+        if (!currentUser) {
+          incrementVisitorCount().then(() => {
+            console.log('Visitor count incremented');
+          }).catch(err => console.error('Visitor count error:', err));
+        }
+      }
+
       setLoading(false);
     });
-
-    // Visitor Counter Logic (Execute once per session)
-    const sessionKey = 'hasVisitedSession';
-    if (!sessionStorage.getItem(sessionKey)) {
-      incrementVisitorCount().then(() => {
-        sessionStorage.setItem(sessionKey, 'true');
-        console.log('Visitor count incremented');
-      }).catch(err => console.error('Visitor count error:', err));
-    }
 
     return () => unsubscribe();
   }, []);
@@ -51,6 +55,8 @@ const App: React.FC = () => {
             <Route path="/rpg" element={<RPGPage user={user} />} />
             <Route path="/log" element={<Log user={user} />} />
             <Route path="/log/:id" element={<Log user={user} />} />
+            <Route path="/diary" element={<Diary user={user} />} />
+            <Route path="/diary/:id" element={<Diary user={user} />} />
             <Route path="/email" element={<SendEmail user={user} />} />
             <Route path="*" element={<Navigate to="/" replace />} />
           </Routes>
