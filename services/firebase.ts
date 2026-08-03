@@ -177,6 +177,17 @@ export const addCategory = async (categoryType: string, newCategory: string) => 
   }
 };
 
+export const updateCategories = async (categoryType: string, newCategories: string[]) => {
+  const docRef = doc(db, 'settings', `${categoryType}_categories`);
+  try {
+    await setDoc(docRef, { list: newCategories }, { merge: true });
+    return newCategories;
+  } catch (error) {
+    console.error('Error updating categories:', error);
+    return [];
+  }
+};
+
 export const deleteCategory = async (categoryType: string, categoryToDelete: string) => {
   const docRef = doc(db, 'settings', `${categoryType}_categories`);
   try {

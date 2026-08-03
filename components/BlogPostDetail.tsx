@@ -117,18 +117,19 @@ const BlogPostDetail: React.FC<BlogPostDetailProps> = ({ post, isAdmin, onBack }
           </button>
           <div className="flex-1 flex flex-wrap items-center gap-2">
              {post.isSecret && <Lock size={20} className="text-gray-400 shrink-0" />}
-             {post.subCategory && (
-                <span className="text-xs bg-gray-100 text-gray-500 px-2 py-0.5 rounded border border-gray-200 font-sans shrink-0">
-                  {post.subCategory}
-                </span>
-             )}
              <h2 className="text-xl md:text-2xl font-bold font-pixel text-cy-dark break-keep leading-snug">
               {post.title || "무제"}
             </h2>
           </div>
         </div>
         <div className="flex items-center justify-between pl-2">
-          <div className="flex items-center gap-4 text-xs text-gray-400 font-pixel">
+          <div className="flex items-center gap-2 text-xs text-gray-400 font-pixel">
+            {post.subCategory && (
+              <>
+                <span className="text-gray-500">{post.subCategory}</span>
+                <span className="text-gray-300">|</span>
+              </>
+            )}
             <span>{new Date(post.createdAt).toLocaleString()}</span>
             {isAdmin && (
               <div className="flex items-center gap-1">

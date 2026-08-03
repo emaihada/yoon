@@ -1,7 +1,7 @@
 import React, { useEffect, useState } from 'react';
-import { addContentItem, deleteContentItem, updateContentItem, subscribeToContent, toggleContentPin, getCategories, addCategory, deleteCategory } from '../services/firebase';
+import { addContentItem, deleteContentItem, updateContentItem, subscribeToContent, toggleContentPin, getCategories, addCategory, deleteCategory, updateCategories } from '../services/firebase';
 import { ContentItem } from '../types';
-import { Trash2, PlusCircle, ArrowRight, Image as ImageIcon, Pin, HelpCircle, X, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Eye, Link as LinkIcon, Lock, FolderPlus } from 'lucide-react';
+import { Trash2, PlusCircle, ArrowRight, Image as ImageIcon, Pin, HelpCircle, X, Edit2, CheckSquare, Square, ChevronDown, ChevronRight, Eye, Link as LinkIcon, Lock, FolderPlus, Settings2, ArrowUp, ArrowDown } from 'lucide-react';
 import MemoItem from './MemoItem';
 import ConfirmModal from './ConfirmModal';
 
@@ -38,6 +38,7 @@ const ContentList: React.FC<ContentListProps> = ({
   const [newItemSubCategory, setNewItemSubCategory] = useState<string>('');
   const [isAddingSubCategory, setIsAddingSubCategory] = useState(false);
   const [newSubCategoryInput, setNewSubCategoryInput] = useState('');
+  const [isManagingCategories, setIsManagingCategories] = useState(false);
 
   // Form State
   const [newItemText, setNewItemText] = useState('');
@@ -83,6 +84,30 @@ const ContentList: React.FC<ContentListProps> = ({
       setNewItemSubCategory(newSubCategoryInput.trim());
       setNewSubCategoryInput('');
       setIsAddingSubCategory(false);
+    }
+  };
+
+  const handleMoveCategory = async (index: number, direction: 'up' | 'down') => {
+    if (direction === 'up' && index > 0) {
+      const newCats = [...subCategories];
+      [newCats[index - 1], newCats[index]] = [newCats[index], newCats[index - 1]];
+      setSubCategories(newCats);
+      await updateCategories(category, newCats);
+    } else if (direction === 'down' && index < subCategories.length - 1) {
+      const newCats = [...subCategories];
+      [newCats[index + 1], newCats[index]] = [newCats[index], newCats[index + 1]];
+      setSubCategories(newCats);
+      await updateCategories(category, newCats);
+    }
+  };
+
+  const handleDeleteCategory = async (catToDelete: string) => {
+    if (window.confirm(`'${catToDelete}' 카테고리를 정말 삭제하시겠습니까?`)) {
+      const updated = await deleteCategory(category, catToDelete);
+      setSubCategories(updated);
+      if (selectedFilterCategory === catToDelete) {
+        setSelectedFilterCategory('all');
+      }
     }
   };
 
@@ -605,18 +630,65 @@ const ContentList: React.FC<ContentListProps> = ({
 
       {/* Filter UI for Blog/Diary */}
       {(category === 'blog' || category === 'diary') && subCategories.length > 0 && (
-        <div className="mb-4 flex items-center gap-2">
-          <span className="text-sm font-bold text-gray-500 shrink-0">카테고리</span>
-          <select
-            className="border border-gray-200 rounded p-1.5 text-sm bg-gray-50 focus:outline-none focus:border-cy-orange text-gray-700 min-w-[120px]"
-            value={selectedFilterCategory}
-            onChange={(e) => setSelectedFilterCategory(e.target.value)}
-          >
-            <option value="all">전체보기</option>
-            {subCategories.map(cat => (
-              <option key={cat} value={cat}>{cat}</option>
-            ))}
-          </select>
+        <div className="mb-4">
+          <div className="flex items-center gap-2">
+            <span className="text-sm font-bold text-gray-500 shrink-0 font-pixel">카테고리</span>
+            <select
+              className="border border-gray-200 rounded p-1.5 text-sm bg-gray-50 focus:outline-none focus:border-cy-orange text-gray-700 min-w-[120px]"
+              value={selectedFilterCategory}
+              onChange={(e) => setSelectedFilterCategory(e.target.value)}
+            >
+              <option value="all">전체보기</option>
+              {subCategories.map(cat => (
+                <option key={cat} value={cat}>{cat}</option>
+              ))}
+            </select>
+            {isAdmin && (
+              <button 
+                onClick={() => setIsManagingCategories(!isManagingCategories)}
+                className={`p-1.5 rounded transition-colors ${isManagingCategories ? 'bg-cy-dark text-white' : 'text-gray-400 hover:bg-gray-100'}`}
+                title="카테고리 관리"
+              >
+                <Settings2 size={16} />
+              </button>
+            )}
+          </div>
+          
+          {/* Category Management UI */}
+          {isAdmin && isManagingCategories && (
+            <div className="mt-3 bg-gray-50 border border-gray-200 rounded p-3 text-sm animate-fade-in">
+              <h4 className="font-bold text-gray-600 mb-2 font-pixel text-xs border-b border-gray-200 pb-2">카테고리 관리</h4>
+              <div className="flex flex-col gap-1">
+                {subCategories.map((cat, idx) => (
+                  <div key={cat} className="flex items-center justify-between bg-white border border-gray-100 p-2 rounded">
+                    <span className="font-sans text-gray-700">{cat}</span>
+                    <div className="flex items-center gap-1">
+                      <button 
+                        onClick={() => handleMoveCategory(idx, 'up')}
+                        disabled={idx === 0}
+                        className="p-1 text-gray-400 hover:text-cy-orange disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                      >
+                        <ArrowUp size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleMoveCategory(idx, 'down')}
+                        disabled={idx === subCategories.length - 1}
+                        className="p-1 text-gray-400 hover:text-cy-orange disabled:opacity-30 disabled:hover:text-gray-400 transition-colors"
+                      >
+                        <ArrowDown size={14} />
+                      </button>
+                      <button 
+                        onClick={() => handleDeleteCategory(cat)}
+                        className="p-1 text-gray-400 hover:text-red-500 ml-2 transition-colors"
+                      >
+                        <Trash2 size={14} />
+                      </button>
+                    </div>
+                  </div>
+                ))}
+              </div>
+            </div>
+          )}
         </div>
       )}
 
@@ -749,13 +821,16 @@ const ContentList: React.FC<ContentListProps> = ({
                   // Blog List View (Title Only)
                   <>
                     <div className="flex flex-col gap-1 overflow-hidden flex-1 min-w-0">
-                       <div className="flex items-center gap-2">
+                       <div className="flex items-center gap-1.5 text-[10px] text-gray-400 font-pixel mb-0.5">
                          {item.subCategory && (
-                            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded whitespace-nowrap self-start border border-gray-200 font-sans">
-                              {item.subCategory}
-                            </span>
+                            <>
+                              <span className="text-gray-500 whitespace-nowrap">
+                                {item.subCategory}
+                              </span>
+                              <span className="text-gray-300">|</span>
+                            </>
                          )}
-                         <span className="text-[10px] text-gray-400 font-pixel whitespace-nowrap">
+                         <span className="whitespace-nowrap">
                             {new Date(item.createdAt).toLocaleDateString()}
                          </span>
                          {item.imageUrl && <ImageIcon size={14} className="text-gray-400 shrink-0" />}
