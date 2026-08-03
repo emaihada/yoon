@@ -749,11 +749,17 @@ const ContentList: React.FC<ContentListProps> = ({
                   // Blog List View (Title Only)
                   <>
                     <div className="flex flex-col gap-1 overflow-hidden flex-1 min-w-0">
-                       {item.subCategory && (
-                          <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded whitespace-nowrap self-start border border-gray-200 font-sans">
-                            {item.subCategory}
-                          </span>
-                       )}
+                       <div className="flex items-center gap-2">
+                         {item.subCategory && (
+                            <span className="text-[10px] bg-gray-100 text-gray-500 px-1.5 py-0.5 rounded whitespace-nowrap self-start border border-gray-200 font-sans">
+                              {item.subCategory}
+                            </span>
+                         )}
+                         <span className="text-[10px] text-gray-400 font-pixel whitespace-nowrap">
+                            {new Date(item.createdAt).toLocaleDateString()}
+                         </span>
+                         {item.imageUrl && <ImageIcon size={14} className="text-gray-400 shrink-0" />}
+                       </div>
                        <div className="flex items-center gap-1 overflow-hidden w-full min-w-0">
                          {/* Pinned Badge for Everyone */}
                          {item.isPinned && (
@@ -773,7 +779,7 @@ const ContentList: React.FC<ContentListProps> = ({
                        </div>
                     </div>
                     
-                    <div className="flex items-center gap-2 shrink-0 ml-2">
+                    <div className="flex items-center gap-2 shrink-0 ml-2 self-end mb-1">
                        {/* View Count (Visible only to Admin) */}
                        {isAdmin && (
                          <div className="flex items-center gap-1 text-gray-400 text-xs mr-1">
@@ -781,13 +787,6 @@ const ContentList: React.FC<ContentListProps> = ({
                            <span className="font-bold">{item.views || 0}</span>
                          </div>
                        )}
-                       
-                       <span className="text-xs text-gray-400 font-pixel whitespace-nowrap">
-                          {new Date(item.createdAt).toLocaleDateString()}
-                       </span>
-                       
-                       {/* Image Icon: Explicitly after Date */}
-                       {item.imageUrl && <ImageIcon size={14} className="text-gray-400 shrink-0" />}
                        
                        <ArrowRight size={14} className="text-gray-300 opacity-0 group-hover:opacity-100 transition-opacity"/>
                     </div>
